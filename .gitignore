@@ -1,5 +1,7 @@
 build
 nimcache
-visual_script
+
 nakefile
+visual_script_tests
+
 *.exe

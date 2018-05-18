@@ -6,14 +6,14 @@ import variant
 export variant
 
 type VSDispatcher* = ref object
-    blueprints*: Table[string, seq[proc(v: Variant)]]
+    networks*: Table[string, seq[proc(v: Variant)]]
 
 proc createVSDispatcher*(): VSDispatcher=
     result.new()
-    result.blueprints = initTable[string, seq[proc(v: Variant)]]()
+    result.networks = initTable[string, seq[proc(v: Variant)]]()
 
 proc dispatchAUX*(d: VSDispatcher, k: string, v: Variant) =
-    var handlers = d.blueprints.getOrDefault(k)
+    var handlers = d.networks.getOrDefault(k)
     if not handlers.isNil:
         for h in handlers:
             h(v)
@@ -55,7 +55,7 @@ macro dispatch*(b: varargs[untyped]): untyped =
     # echo "res ", repr(result)
 
 template registerAUX(d: VSDispatcher, k: string, b: untyped)=
-    var handlers = d.blueprints.getOrDefault(k)
+    var handlers = d.networks.getOrDefault(k)
     if handlers.isNil:
         handlers = @[]
 
@@ -64,7 +64,7 @@ template registerAUX(d: VSDispatcher, k: string, b: untyped)=
         b
 
     handlers.add(handler)
-    d.blueprints[k] = handlers
+    d.networks[k] = handlers
 
 proc register*(d: VSDispatcher, k: string, cb: proc())=
     registerAUX(d, k):
