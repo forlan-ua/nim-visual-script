@@ -1,0 +1,72 @@
+import tables
+import nimx / [
+    types, view, button, text_field, panel_view, context, event,
+    view_dragging_listener, font, formatted_text, gesture_detector
+]
+
+
+var defaultFont*: Font = systemFontOfSize(16.0)
+
+var colorTable* = initTable[string, Color]()
+
+const portStep* = 35.0
+
+const pinSize* = newSize(25.0, 25.0)
+const pinDefaultColor* = whiteColor()
+const pinConnectedColor* = newColor(0.1, 0.8, 0.2, 1.0)
+
+const pinDragColor* = newColor(0.2, 0.1, 0.8, 1.0)
+
+const pinConnectErrorColor* = newColor(0.8, 0.2, 0.0, 1.0)
+const pinConnectOKColor* = pinConnectedColor
+
+const lineDragColor* = blackColor()
+const lineConnectedColor* = pinConnectedColor
+
+
+type PortInfo* = tuple
+    name: string
+    typ: string
+    value: string
+    active: bool
+
+type HostInfo* = tuple
+    name: string
+    inputPorts: seq[PortInfo]
+    outputPorts: seq[PortInfo]
+
+type
+    PortViewScrollListner* = ref object of OnScrollListener
+        port*: VSPortView
+
+    VSPortView* = ref object of View
+        connections*: seq[VSPortView]
+        orientation*: bool
+        pinColor*: Color
+        info*: PortInfo
+        listner*: VSPortListner
+        pinPosition*: Point
+
+    VSHostView* = ref object of PanelView
+        input*: seq[VSPortView]
+        output*: seq[VSPortView]
+        info*: HostInfo
+        network*: VSNetworkView
+
+    VSPortListner* = ref object
+        onPortDrag*: proc(p: Point)
+        onPortDragEnd*: proc(p: VSPortView)
+        onPortDragStart*: proc(p: VSPortView)
+
+        onPortOverIn*: proc(p: VSPortView)
+        onPortOverOut*: proc(p: VSPortView)
+
+    VSNetworkView* = ref object of View
+        hosts*: seq[VSHostView]
+        connections*: seq[tuple[a: VSPortView, b: VSPortView]]
+
+        dragStartPort*: VSPortView
+        overPort*: VSPortView
+        dragStartPoint*: Point
+        dragPosition*: Point
+
