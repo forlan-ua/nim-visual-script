@@ -1,138 +1,101 @@
-import macros, strutils
-import vs_types, vs_dispatcher
+import strutils, tables, strutils, typetraits
+
+import vs_types
+
+type Node = ref object of RootObj
+proc findNode(parent: Node, nodeName: string): Node {.vsHost.} = echo "findNode: ", nodeName
+proc getRootNode(): Node {.vsHost.} = echo "getRootNode"
+type Component = ref object of RootObj
+proc getComponent(node: Node): Component {.vsHost.} = echo "getComponent" 
+proc setText(component: Component, text: string) {.vsHost.} = echo "setText: ", text
+proc addChild(parent: Node, child: Node) {.vsHost.} = echo "addChild"
+
+proc accessPoint(): tuple[nodeName, text: string, child: Node] {.vsHost.} =
+    discard
 
 
-####
-type Node = ref object
-proc newNodeWithResource(s: string): Node = echo "newNodeWithResource: ", s
+let network = VSNetwork.new()
+network.hosts = newSeq[VSHost](5)
 
-type OpenWindowAP = ref object of VSHost
-    input0: VSPort[Node]
-    input1: VSPort[string]
+let h0 = getHostFromRegistry(AccessPointVSHost)
+h0.nodeName.readImpl = proc(): string =
+    return h0.nodeName.rawData()
+h0.text.readImpl = proc(): string =
+    return h0.text.rawData()
+h0.child.readImpl = proc(): Node =
+    return h0.child.rawData()
 
-    output0: VSPort[Node]
-    output1: VSPort[string]
+let h1 = getHostFromRegistry(GetRootNodeVSHost)
+network.hosts[0] = h1
 
-method invoke(ap: OpenWindowAP) =
-    ap.output0.write(ap.input0.read())
-    ap.output1.write(ap.input1.read())
+let h2 = getHostFromRegistry(FindNodeVSHost)
+h2.nodeName.connect(h0.nodeName)
+h2.parent.connect(h1.output)
+network.hosts[1] = h2
 
-type NewNodeWithResource = ref object of VSHost
-    input0: VSPort[string]
-    output0: VSPort[Node]
+let h3 = getHostFromRegistry(GetComponentVSHost)
+h3.node.connect(h2.output)
+network.hosts[2] = h3
 
-method invoke(f: NewNodeWithResource) =
-    let val = f.input0.read()
-    if val.isNil:
-        return
-    f.output0.write(newNodeWithResource(val))
+let h4 = getHostFromRegistry(SetTextVSHost)
+h4.component.connect(h3.output)
+h4.text.connect(h0.text)
+network.hosts[3] = h4
+
+let h5 = getHostFromRegistry(AddChildVSHost)
+h5.parent.connect(h2.output)
+h5.child.connect(h0.child)
+network.hosts[4] = h1
 
 
-proc createOpenWindowAPFlowEx(n: Node, c: string) =
-    let d1 = OpenWindowAP.new()
-    d1.input0 = newVSPort(Node, Input)
-    d1.input0.write(n)
-    d1.input1 = newVSPort(string, Input)
-    d1.input1.write(c)
-    d1.output0 = newVSPort(Node, Output)
-    d1.output1 = newVSPort(string, Output)
-    d1.invoke()
+network.flow = proc() =
+    h0.nodeName.write("test1")
+    h0.text.write("test2")
 
-    let d2 = NewNodeWithResource.new()
-    d2.input0 = newVSPort(string, Input)
-    d2.output0 = newVSPort(Node, Output)
-    d2.listen(d2.input0)
-    d2.input0.connect(d1.output1)
-    d2.invoke()
+    h0.invokeFlow()
+    h4.invokeFlow()
+    h5.invokeFlow()
+echo "\n\nSTART FLOW 1:"
+network.flow()
 
-    d1.output1.write("TEST2")
+network.clean()
 
-proc createOpenWindowAPFlow() =
-    var rootNode: Node
-    var comp: string = "TEST1"
+network.flow = proc() =
+    h0.nodeName.write("test1")
+    h0.text.write("test2")
 
-    createOpenWindowAPFlowEx(rootNode, comp)
+    h0.invokeFlow()
+    h2.invokeFlow()
+    h4.invokeFlow()
+    h5.invokeFlow()
+echo "\n\nSTART FLOW 2:"
+network.flow()
 
-proc getName(n: NimNode): string =
-    if n.kind == nnkIdent:
-        return $(n.ident)
-    elif n.kind == nnkPostfix:
-        return $(n[1].ident)
+network.destroy()
 
-macro vshost(a: untyped): typed =
-    case a.kind:
-        of nnkProcDef, nnkMethodDef:
-            discard
-        else:
-            error "Unexpected kind. For proc and method only!"
 
-    let typeName = ident(a[0].getName().capitalizeAscii() & "VSHost")
-    let ftype = nnkTypeSection.newTree(
-        nnkTypeDef.newTree(
-            nnkPostfix.newTree(
-                ident("*"),
-                typeName
-            ),
-            newEmptyNode(),
-            nnkObjectTy.newTree(
-                newEmptyNode(),
-                nnkOfInherit.newTree(
-                    ident("VSHost")
-                ),
-                newEmptyNode()
-            )
-        )
-    )
+let source = """
+0 AccessPointClick
 
-    let invoke = newProc(
-        nnkPostfix.newTree(ident("*"), ident("invoke")),
-        [newEmptyNode(), nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode())],
-        nnkStmtList.newTree(nnkDiscardStmt.newTree(newEmptyNode())),
-        nnkMethodDef
-    )
+1 GetRootNodeVSHost
 
-    let define = newProc(
-        nnkPostfix.newTree(ident("*"), ident("create" & $typeName.ident)),
-        [newEmptyNode()],
-        nnkStmtList.newTree(nnkDiscardStmt.newTree(newEmptyNode()))
-    )
+2 FindNodeVSHost
+2.nodeName->0.nodeName
+2.parent->1.output
 
-    result = nnkStmtList.newTree(
-        ftype,
-        invoke,
-        define
-    )
-    result.add(a)
+3 GetComponentVSHost
+3.node->2.output
 
-    echo repr(result)
+4 SetTextVSHost
+4.node->3.output
+4.text->0.text
 
-var dispatcher = createVSDispatcher()
+5 AddChildVSHost
+5.parent.connect(2.output)
+5.child.connect(0.child)
 
-dispatcher.register("TEST_RUN_EX") do(n: Node, c: string):
-    echo "TEST_RUN_EX ", c
-    createOpenWindowAPFlowEx(n, c)
+0->4->5
 
-dispatcher.register("TEST_RUN_EX") do(n: Node, c: string):
-    echo "TEST_RUN_EX 2 ", c
-    createOpenWindowAPFlowEx(n, c)
+0->2->3->4->5
 
-dispatcher.register("TEST_RUN") do():
-    echo "createOpenWindowAPFlow "
-    createOpenWindowAPFlow()
-
-dispatcher.dispatch("TEST_RUN")
-
-var nodeArg: Node
-var strArg = "OMG MF"
-dispatcher.dispatch("TEST_RUN_EX", nodeArg, strArg)
-
-proc canHost(a: int, b: Node, c: proc(), d: string = "asd", e: proc() = nil): string {.vshost.} =
-    return "22"
-
-let a = ("asd", "dsa")
-
-for k,v in a.fieldPairs:
-    echo k, ": ", v
-
-var bb: Node
-echo canHost(20, bb, nil)
+"""
