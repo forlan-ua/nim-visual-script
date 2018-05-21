@@ -1,3 +1,7 @@
+build
 nimcache
+
+nakefile
 visual_script_tests
+
 *.exe
