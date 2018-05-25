@@ -163,6 +163,11 @@ var compileTimeRegistry {.compiletime.} = initTable[string, NimNode]()
 proc getName(n: NimNode): string =
     if n.kind == nnkIdent:
         return $n
+    elif n.kind == nnkAccQuoted:
+        if n[1].eqIdent("="):
+            return $n[0] & "Setter"
+        else:
+            return $n[0]
     elif n.kind == nnkPostfix:
         return $n[1]
 
@@ -602,7 +607,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 
     let outputs = generateOutputs(a)
     let inputs = generateInputs(a)
-
+    
     var originalProcName = originalProcName
     if compileTimeRegistry.hasKey(originalProcName):
         for input in inputs:
@@ -612,7 +617,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
                 originalProcName &= sign[0 ..< index].capitalizeAscii()
             else:
                 originalProcName &= sign.capitalizeAscii()
-
+                
     result = nnkStmtList.newTree(a)
 
     let typeName = ident(originalProcName.capitalizeAscii() & "VSHost")
