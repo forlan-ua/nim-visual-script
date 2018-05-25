@@ -153,6 +153,9 @@ proc getHostFromRegistry*(T: typedesc[VSHost]): T =
     type TT = T
     return getHostFromRegistry[T](T.name).TT
 
+iterator walkHostRegistry*(): VSHost =
+    for host in hostRegistry.values():
+        yield host()
 
 ####
 var compileTimeRegistry {.compiletime.} = initTable[string, NimNode]()
