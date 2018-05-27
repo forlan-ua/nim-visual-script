@@ -1,5 +1,5 @@
 import macros, strutils, tables, strutils, typetraits, variant, parseutils
-
+export strutils, tables, strutils, typetraits, variant, parseutils
 
 type VSPortKind* {.pure.} = enum
     Input
@@ -127,7 +127,6 @@ method metadata*(vs: VSHost): VSHostMeta {.base.} = discard
 method getPort*(vs: VSHost, name: string): Variant {.base.} = discard
 method connect*(vs: VSHost, port: string, vs2: VSHost, port2: string) {.base.} = discard
 
-
 method destroy*(vs: VSHost) {.base.} = discard
 proc flow*(vs: VSHost): bool = vs.frozen
 
@@ -237,8 +236,9 @@ proc generateTypeWithFields(a: NimNode, originalProcName: string, typeName: NimN
 
 proc generateOriginalFunctionCall(a: NimNode, originalProcName: string, inputs: seq[InputPortNode]): NimNode =
     let invokeRes = nnkCall.newTree(
-        a[0]
+        ident(originalProcName)
     )
+
     for i, input in inputs:
         invokeRes.add(
             nnkCall.newTree(
@@ -297,7 +297,7 @@ proc generateInvokeMethod(a: NimNode, originalProcName: string, typeName: NimNod
 
 
 template metadata(T, tn, fn, inputs, outputs): untyped =
-    proc metadata*(vs: typedesc[T]): VSHostMeta =
+    method metadata*(vs: T): VSHostMeta =
         return (tn, fn, inputs, outputs)
 proc generateMetaDataProc(a: NimNode, originalProcName: string, typeName: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
     let inputsSeq = nnkPrefix.newTree(ident("@"), nnkBracket.newTree())
