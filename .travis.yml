@@ -1,0 +1,9 @@
+sudo: required
+
+language: nim
+
+before_install:
+  - docker pull forlanua/nim
+
+script:
+  - sh deploy.sh
