@@ -1,14 +1,19 @@
 #!/bin/sh
 
-# nim c --run tests/visual_script_tests
+DIR=$(pwd)
+cd $(dirname $0)
+WORKDIR=$(pwd)
 
-# RESULT=$?
-# if [ "$RESULT" != "0" ]; then
-#     exit $RESULT
-# fi
+docker run --rm -it -v "$WORKDIR/..:/source" -w "/source" forlanua/nim /bin/sh -c "nimble install && cd tests && nake tests"
 
+RESULT=$?
+if [ "$RESULT" != "0" ]; then
+    exit $RESULT
+fi
 
-if [ "$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "master" ]; then
+    echo "Non master branch \`$BRANCH\`"
     exit 0
 fi
 
