@@ -1,11 +1,11 @@
 #!/bin/sh
 
-nim c --run tests/visual_script_tests
+# nim c --run tests/visual_script_tests
 
-RESULT=$?
-if [ "$RESULT" != "0" ]; then
-    exit $RESULT
-fi
+# RESULT=$?
+# if [ "$RESULT" != "0" ]; then
+#     exit $RESULT
+# fi
 
 
 if [ "$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then
