@@ -1,6 +1,6 @@
 import strutils, tables, strutils, typetraits, variant, parseutils
 
-import vs_types
+import visual_script
 
 type Node = ref object of RootObj
 proc findNode(parent: Node, nodeName: string): Node {.vsHost.} = echo "findNode: ", nodeName

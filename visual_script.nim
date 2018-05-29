@@ -234,9 +234,13 @@ proc generateTypeWithFields(a: NimNode, originalProcName: string, typeName: NimN
         recList.add(createPortNode(ident("i" & $i), input.sign))
 
 
-proc generateOriginalFunctionCall(a: NimNode, originalProcName: string, inputs: seq[InputPortNode]): NimNode =
+proc generateOriginalFunctionCall(a: NimNode, inputs: seq[InputPortNode]): NimNode =
+    var procName = a[0]
+    if procName.kind == nnkPostfix:
+        procName = procName[1]
+
     let invokeRes = nnkCall.newTree(
-        ident(originalProcName)
+        procName
     )
 
     for i, input in inputs:
@@ -253,7 +257,9 @@ proc generateOriginalFunctionCall(a: NimNode, originalProcName: string, inputs: 
         )
     result = invokeRes
 
-proc generateInvokeMethod(a: NimNode, originalProcName: string, typeName: NimNode, originalCall: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
+proc generateInvokeMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
+    let originalCall = generateOriginalFunctionCall(a, inputs)
+    
     let invoke = newProc(
         nnkPostfix.newTree(ident("*"), ident("invoke")), 
         [newEmptyNode(), nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode())], 
@@ -625,8 +631,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
     let typeWithFields = generateTypeWithFields(a, originalProcName, typeName, outputs, inputs)
     result.add(typeWithFields)
 
-    let originalCall = generateOriginalFunctionCall(a, originalProcName, inputs)
-    let invokeMethod = generateInvokeMethod(a, originalProcName, typeName, originalCall, outputs, inputs)
+    let invokeMethod = generateInvokeMethod(a, typeName, outputs, inputs)
     result.add(invokeMethod)
 
     let metadataProc = generateMetaDataProc(a, originalProcName, typeName, outputs, inputs)
