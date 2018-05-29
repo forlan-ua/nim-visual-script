@@ -16,16 +16,17 @@ if [ "$RESULT" != "0" ]; then
     exit $RESULT
 fi
 
-git tag -l | xargs git tag -d
-git fetch --tags
-
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$BRANCH" != "master" ]; then
-    echo "Non master branch \`$BRANCH\`"
+LAST_VERSION=$(git ls-remote https://github.com/forlan-ua/nim-visual-script master | sed "s/refs\/heads\/master//" | tr -d '[:space:]')
+CUR_VERSION=$(git rev-parse HEAD)
+if [ "$LAST_VERSION" != "$CUR_VERSION" ]; then
+    echo "Non last master commit \`$LAST_VERSION\`"
     exit 0
 fi
 
 set -f
+
+git tag -l | xargs git tag -d
+git fetch --tags
 
 mkdir -p ~/.ssh
 rm -rf ~/.ssh/id_rsa
