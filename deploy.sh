@@ -9,12 +9,15 @@ echo $WORKDIR
 
 COMPILE="nim c --run -d:release --nimcache:/tmp/nimcache visual_script_tests"
 
-docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim /bin/bash -c "nimble install -y && cd tests && $COMPILE"
+docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e /bin/bash -c "nimble install -y && cd tests && $COMPILE"
 
 RESULT=$?
 if [ "$RESULT" != "0" ]; then
     exit $RESULT
 fi
+
+git tag -l | xargs git tag -d
+git fetch --tags
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$BRANCH" != "master" ]; then
@@ -33,14 +36,10 @@ chmod 400 ~/.ssh/id_rsa
 ssh-add ~/.ssh/id_rsa
 ssh-keygen -R github.com
 
-
 git config --global user.email "builds@travis-ci.com"
 git config --global user.name "Travis CI"
 git remote remove origin
 git remote add origin git@github.com:forlan-ua/nim-visual-script.git
-
-git tag -l | xargs git tag -d
-git fetch --tags
 
 RESULT=$?
 if [ "$RESULT" != "0" ]; then
