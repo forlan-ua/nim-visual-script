@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 
 DIR=$(pwd)
 cd $(dirname $0)
@@ -25,17 +25,17 @@ fi
 
 set -f
 
-git tag -l | xargs git tag -d
-git fetch --tags
-
 mkdir -p ~/.ssh
 rm -rf ~/.ssh/id_rsa
 KEY=$(echo $GITHUB_KEY | sed "s/|/\\\n/g")
 echo -e $KEY > ~/.ssh/id_rsa
 chmod 400 ~/.ssh/id_rsa
 
-ssh-add ~/.ssh/id_rsa
-ssh-keygen -R github.com
+# ssh-add ~/.ssh/id_rsa
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+git tag -l | xargs git tag -d
+git fetch --tags
 
 git config --global user.email "builds@travis-ci.com"
 git config --global user.name "Travis CI"
