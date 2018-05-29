@@ -8,4 +8,6 @@ skipDirs = @["tests"]
 skipFiles = @[".travis.yml", "deploy.sh"]
 
 
+requires "variant"
+requires "nake"
 requires "https://github.com/OnsetGame/nimx"
