@@ -6,4 +6,4 @@ before_install:
   - docker pull forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e
 
 script:
-  - bash deploy.sh
+  - bash ci/deploy.sh

@@ -4,7 +4,7 @@ DIR=$(pwd)
 cd $(dirname $0)
 WORKDIR=$(pwd)
 
-NIMBLE_INSTALL="nimble install variant"
+NIMBLE_INSTALL="nimble install variant -y"
 COMPILE="nim c --run -d:release --nimcache:/tmp/nimcache visual_script_tests"
 
 docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e /bin/bash -c "$NIMBLE_INSTALL && cd tests && $COMPILE"
