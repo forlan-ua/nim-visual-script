@@ -36,7 +36,7 @@ proc connect*[T](p1, p2: VSPort[T]) =
 
 
 proc connect*[T](p1: VSPort[T], p2: Variant) =
-    p1.connect(p2.get(VSPort[T]))
+    p1.connect(p2.get(p1.type))
 
 
 proc disconnect*[T](p1, p2: VSPort[T]) =
@@ -112,27 +112,27 @@ proc newVSPort*(name: string, T: typedesc, kind: VSPortKind): VSPort[T] =
     result.kind = kind
     result.connections = @[]
 
-proc newVSPort*(T: typedesc, kind: VSPortKind): VSPort[T] =
-    newVSPort("", T, kind)
+proc clone*[T](port: VSPort[T], kind: VSPortKind): VSPort[T] =
+    newVSPort(port.name, T, kind)
 
 
 type VSHostMeta* = tuple[typeName, procName: string, inputs: seq[tuple[name, sign, default: string]], outputs: seq[tuple[name, sign, default: string]]]
 type VSHost* = ref object of RootObj
+    flow*: seq[VSHost]
     name*: string
     frozen: bool
 
-
 method invoke*(vs: VSHost) {.base.} = discard
 method metadata*(vs: VSHost): VSHostMeta {.base.} = discard
-method getPort*(vs: VSHost, name: string): Variant {.base.} = discard
-method connect*(vs: VSHost, port: string, vs2: VSHost, port2: string) {.base.} = discard
-
+method getPort*(vs: VSHost, name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant {.base.} = discard
+method connect*(vs: VSHost, port: string, port2: Variant) {.base.} = discard
+template connect*(vs: VSHost, port: string, vs2: VSHost, port2: string) = vs.connect(port, vs2.getPort(port2))
 method destroy*(vs: VSHost) {.base.} = discard
-proc flow*(vs: VSHost): bool = vs.frozen
-
-proc invokeFlow*(vs: VSHost) =
+method invokeFlow*(vs: VSHost) {.base.} =
     vs.frozen = true
     vs.invoke()
+    for h in vs.flow:
+        h.invokeFlow()
 
 ####
 var hostRegistry = initTable[string, proc(): VSHost]()
@@ -338,16 +338,21 @@ proc generateCreatorProc(a: NimNode, originalProcName: string, creatorProcName: 
                     newEmptyNode(),
                     nnkCall.newTree(nnkDotExpr.newTree(typeName, ident("new")))
                 )
-            )
-        )
-    )
-    creator.body.add(
-        nnkAsgn.newTree(
-            nnkDotExpr.newTree(
-                ident("vs"),
-                ident("name")
             ),
-            newLit(originalProcName)
+            nnkAsgn.newTree(
+                nnkDotExpr.newTree(
+                    ident("vs"),
+                    ident("name")
+                ),
+                newLit(originalProcName)
+            ),
+            nnkAsgn.newTree(
+                nnkDotExpr.newTree(
+                    ident("vs"),
+                    ident("flow")
+                ),
+                nnkPrefix.newTree(ident("@"), nnkBracket.newTree())
+            )
         )
     )
     for i, input in inputs:
@@ -474,54 +479,98 @@ proc generateDestroyMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
 proc generateGetPortMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
     let getPort = newProc(
         nnkPostfix.newTree(ident("*"), ident("getPort")),
-        [ident("Variant"), nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()), nnkIdentDefs.newTree(ident("name"), ident("string"), newEmptyNode())],
+        [
+            ident("Variant"), 
+            nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()), 
+            nnkIdentDefs.newTree(ident("name"), ident("string"), newEmptyNode()), 
+            nnkIdentDefs.newTree(ident("clone"), ident("bool"), ident("false")), 
+            nnkIdentDefs.newTree(ident("cloneAs"), ident("VSPortKind"), nnkDotExpr.newTree(ident("VSPortKind"), ident("Output")))
+        ],
         nnkStmtList.newTree(nnkIfStmt.newTree()),
         nnkMethodDef
     )
 
     for i, input in inputs:
-        getPort.body[0].add(
-            nnkElifBranch.newTree(
-                nnkInfix.newTree(
-                    ident("=="),
-                    ident("name"),
-                    newLit("i" & $i)
-                ),
-                nnkStmtList.newTree(
-                    nnkReturnStmt.newTree(
-                        nnkCall.newTree(
-                            ident("newVariant"),
-                            nnkDotExpr.newTree(
-                                ident("vs"),
-                                ident("i" & $i)
+        closureScope:
+            let port = ident("i" & $i)
+            getPort.body[0].add(
+                nnkElifBranch.newTree(
+                    nnkInfix.newTree(
+                        ident("=="),
+                        ident("name"),
+                        newLit($port)
+                    ),
+                    nnkStmtList.newTree(
+                        nnkReturnStmt.newTree(
+                            nnkCall.newTree(
+                                ident("newVariant"),
+                                nnkIfExpr.newTree(
+                                    nnkElifExpr.newTree(
+                                        ident("clone"),
+                                        nnkCall.newTree(
+                                            nnkDotExpr.newTree(
+                                                nnkDotExpr.newTree(
+                                                    ident("vs"),
+                                                    port
+                                                ),
+                                                ident("clone")
+                                            ),
+                                            ident("cloneAs")
+                                        )
+                                    ),
+                                    nnkElseExpr.newTree(
+                                        nnkDotExpr.newTree(
+                                            ident("vs"),
+                                            port
+                                        )
+                                    )
+                                )
                             )
                         )
                     )
                 )
             )
-        )
 
     for i, output in outputs:
-        getPort.body[0].add(
-            nnkElifBranch.newTree(
-                nnkInfix.newTree(
-                    ident("=="),
-                    ident("name"),
-                    newLit("o" & $i)
-                ),
-                nnkStmtList.newTree(
-                    nnkReturnStmt.newTree(
-                        nnkCall.newTree(
-                            ident("newVariant"),
-                            nnkDotExpr.newTree(
-                                ident("vs"),
-                                ident("o" & $i)
+        closureScope:
+            let port = ident("o" & $i)
+            getPort.body[0].add(
+                nnkElifBranch.newTree(
+                    nnkInfix.newTree(
+                        ident("=="),
+                        ident("name"),
+                        newLit($port)
+                    ),
+                    nnkStmtList.newTree(
+                        nnkReturnStmt.newTree(
+                            nnkCall.newTree(
+                                ident("newVariant"),
+                                nnkIfExpr.newTree(
+                                    nnkElifExpr.newTree(
+                                        ident("clone"),
+                                        nnkCall.newTree(
+                                            nnkDotExpr.newTree(
+                                                nnkDotExpr.newTree(
+                                                    ident("vs"),
+                                                    port
+                                                ),
+                                                ident("clone")
+                                            ),
+                                            ident("cloneAs")
+                                        )
+                                    ),
+                                    nnkElseExpr.newTree(
+                                        nnkDotExpr.newTree(
+                                            ident("vs"),
+                                            port
+                                        )
+                                    )
+                                )
                             )
                         )
                     )
                 )
             )
-        )
 
     result = getPort
 
@@ -533,8 +582,7 @@ proc generateConnectMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
             newEmptyNode(), 
             nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()), 
             nnkIdentDefs.newTree(ident("port"), ident("string"), newEmptyNode()),
-            nnkIdentDefs.newTree(ident("vs2"), ident("VSHost"), newEmptyNode()),
-            nnkIdentDefs.newTree(ident("port2"), ident("string"), newEmptyNode())
+            nnkIdentDefs.newTree(ident("port2"), ident("Variant"), newEmptyNode())
         ],
         nnkStmtList.newTree(nnkIfStmt.newTree()),
         nnkMethodDef
@@ -559,13 +607,7 @@ proc generateConnectMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
                                 ),
                                 ident("connect")
                             ),
-                            nnkCall.newTree(
-                                nnkDotExpr.newTree(
-                                    ident("vs2"),
-                                    ident("getPort")
-                                ),
-                                ident("port2")
-                            )
+                            ident("port2")
                         )
                     )
                 )
@@ -590,13 +632,7 @@ proc generateConnectMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
                                 ),
                                 ident("connect")
                             ),
-                            nnkCall.newTree(
-                                nnkDotExpr.newTree(
-                                    ident("vs2"),
-                                    ident("getPort")
-                                ),
-                                ident("port2")
-                            )
+                            ident("port2")
                         )
                     )
                 )
@@ -680,173 +716,3 @@ macro vshost*(name: untyped, a: untyped = nil): typed =
         toVsHost($name, a)
     else:
         toVsHost(name[0].getName(), name)
-
-
-type VSNetwork* = ref object of VSHost
-    ports*: seq[Variant]
-    hosts*: seq[VSHost]
-    runner*: proc()
-
-
-proc destroy*(net: VSNetwork) =
-    for host in net.hosts:
-        host.destroy()
-
-
-proc clean*(net: VSNetwork) =
-    for host in net.hosts:
-        host.frozen = false
-
-
-var networksRegistry = initTable[string, VSNetwork]()
-proc putNetworkToRegistry*(net: VSNetwork) =
-    networksRegistry[net.name] = net
-proc getNetworkFromRegistry*(name: string): VSNetwork =
-    networksRegistry.getOrDefault(name)
-
-
-var dispatchRegistry = initTable[string, seq[string]]()
-proc putNetworksToDispatchRegistry*(event: string, networks: varargs[string]) =
-    var nets = dispatchRegistry.getOrDefault(event)
-    if nets.isNil:
-        nets = @[]
-    for net in networks:
-        if nets.find(net) == -1:
-            nets.add(net)
-    dispatchRegistry[event] = nets
-
-proc removeNetworksFromDispatchRegistry*(event: string, networks: varargs[string]) =
-    var nets = dispatchRegistry.getOrDefault(event)
-    if nets.isNil:
-        return
-    for net in networks:
-        let ind = nets.find(net)
-        if ind > -1:
-            nets.del(ind)
-    dispatchRegistry[event] = nets
-
-iterator eachNetwork*(event: string): VSNetwork =
-    let networks = dispatchRegistry.getOrDefault(event)
-    for net in networks:
-        let n = getNetworkFromRegistry(net)
-        if not n.isNil:
-            yield n
-
-macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
-    var res = nnkStmtList.newTree()
-    proc portData(i: int, arg: NimNode): NimNode =
-        nnkCall.newTree(
-            nnkDotExpr.newTree(
-                nnkCall.newTree(
-                    nnkDotExpr.newTree(
-                        nnkBracketExpr.newTree(
-                            nnkDotExpr.newTree(
-                                ident("n"),
-                                ident("ports")
-                            ),
-                            newLit(i)
-                        ),
-                        ident("get")
-                    ),
-                    nnkBracketExpr.newTree(
-                        ident("VSPort"),
-                        nnkDotExpr.newTree(
-                            arg,
-                            ident("type")
-                        )
-                    )
-                ),
-                ident("write")
-            ),
-            arg
-        )
-
-    res.add(
-        nnkForStmt.newTree(
-            newIdentNode("n"),
-            nnkCall.newTree(
-                newIdentNode("eachNetwork"),
-                event
-            ),
-            nnkStmtList.newTree()
-        )
-    )
-
-    for i, arg in args:
-        res[0][2].add(portData(i, arg))
-
-    res[0][2].add(
-        nnkCall.newTree(
-            nnkDotExpr.newTree(
-                newIdentNode("n"),
-                newIdentNode("runner")
-            )
-        )
-    )
-
-    result = res
-
-    echo repr(result)
-
-
-proc generateNetwork*(source: string): VSNetwork {.discardable.} =
-    var localRegistry = initTable[string, VSHost]()
-
-    var inputs = newSeq[Variant]()
-    var hosts = newSeq[VSHost]()
-
-    var newtworkName: string
-    var dispatcherName: string
-
-    var index: string
-    var name: string
-    var start: int
-
-    start += source.parseUntil(newtworkName, '>', start) + 1
-    start += source.parseUntil(dispatcherName, '\n', start) + 1
-    start.inc
-
-    var port2Index, port2Name: string
-    var port1Index, port1Name: string
-
-
-    while start < source.len:
-        start += source.parseUntil(index, ' ', start) + 1
-        if start >= source.len:
-            break
-        start += source.parseUntil(name, '\n', start) + 1
-        
-        let host = getHostFromRegistry(name)
-        localRegistry[index] = host
-        hosts.add(host)
-
-        while true:
-            start += source.parseUntil(port1Index, {'.', '\n'}, start) + 1
-            if port1Index.len == 0:
-                break
-            start += source.parseUntil(port1Name, '>', start) + 1
-            start += source.parseUntil(port2Index, {'.', '\n'}, start) + 1
-            if port2Index[0].isDigit():
-                start += source.parseUntil(port2Name, '\n', start) + 1
-            else:
-                port2Name = ""
-
-            if port2Name.len > 0:
-                localRegistry[port1Index].connect(port1Name, localRegistry[port2Index], port2Name)
-            else:
-                let ind = parseInt(port2Index.substr(1, port2Index.high))
-                inputs.insert(localRegistry[port1Index].getPort(port1Name), ind)
-
-            # echo "CONNECTION: ", port1Index, ".", port1Name, "->", port2Index, ".", port2Name
-
-    let f = index
-
-    var flow = proc() {.closure.} =
-        echo " "
-        for ind in f.split('>'):
-            hosts[parseInt(ind.strip())].invokeFlow()
-        echo " "
-
-    result = VSNetwork(name: newtworkName, ports: inputs, hosts: hosts, runner: flow)
-    putNetworkToRegistry(result)
-    putNetworksToDispatchRegistry(dispatcherName, newtworkName)

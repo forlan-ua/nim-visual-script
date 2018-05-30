@@ -4,8 +4,8 @@ author = "ZeoAlliance"
 description = "Visual Script Engine"
 license = "MIT"
 
-skipDirs = @["tests"]
-skipFiles = @[".travis.yml", "deploy.sh"]
+skipDirs = @["tests", "ci"]
+skipFiles = @[".travis.yml"]
 
 
 requires "variant"
