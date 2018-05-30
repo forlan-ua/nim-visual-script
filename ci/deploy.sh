@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR=$(pwd)
-cd $(dirname $0)
+cd $(dirname $0)/..
 WORKDIR=$(pwd)
 
 NIMBLE_INSTALL="nimble install variant -y"
