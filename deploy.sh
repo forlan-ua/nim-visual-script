@@ -4,9 +4,10 @@ DIR=$(pwd)
 cd $(dirname $0)
 WORKDIR=$(pwd)
 
+NIMBLE_INSTALL="nimble install variant"
 COMPILE="nim c --run -d:release --nimcache:/tmp/nimcache visual_script_tests"
 
-docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e /bin/bash -c "nimble install -y && cd tests && $COMPILE"
+docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e /bin/bash -c "$NIMBLE_INSTALL && cd tests && $COMPILE"
 
 RESULT=$?
 if [ "$RESULT" != "0" ]; then
@@ -16,7 +17,7 @@ fi
 LAST_VERSION=$(git ls-remote https://github.com/forlan-ua/nim-visual-script master | sed "s/refs\/heads\/master//" | tr -d '[:space:]')
 CUR_VERSION=$(git rev-parse HEAD)
 if [ "$LAST_VERSION" != "$CUR_VERSION" ]; then
-    echo "Non last master commit \`$LAST_VERSION\`"
+    echo "Non the last master commit. Skip auto tagging."
     exit 0
 fi
 
@@ -26,7 +27,7 @@ git fetch --tags
 
 
 if [ ! -z "$(git tag --points-at $CUR_VERSION)" ]; then
-    echo "Tag has been already "
+    echo "Commit has been already tagged"
     exit 0
 fi
 
