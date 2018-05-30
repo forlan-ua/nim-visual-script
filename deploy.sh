@@ -4,9 +4,6 @@ DIR=$(pwd)
 cd $(dirname $0)
 WORKDIR=$(pwd)
 
-echo $DIR
-echo $WORKDIR
-
 COMPILE="nim c --run -d:release --nimcache:/tmp/nimcache visual_script_tests"
 
 docker run --rm -it -v "$WORKDIR:/visual_script" -w "/visual_script" forlanua/nim:ce1bd913cf036a57cff31e36c9e850316076649e /bin/bash -c "nimble install -y && cd tests && $COMPILE"
@@ -23,6 +20,16 @@ if [ "$LAST_VERSION" != "$CUR_VERSION" ]; then
     exit 0
 fi
 
+
+git tag -l | xargs git tag -d
+git fetch --tags
+
+
+if [ ! -z "$(git tag --points-at $CUR_VERSION)" ]; then
+    echo "Tag has been already "
+    exit 0
+fi
+
 set -f
 
 mkdir -p ~/.ssh
@@ -33,9 +40,6 @@ chmod 400 ~/.ssh/id_rsa
 
 # ssh-add ~/.ssh/id_rsa
 ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-git tag -l | xargs git tag -d
-git fetch --tags
 
 git config --global user.email "builds@travis-ci.com"
 git config --global user.name "Travis CI"
