@@ -1,5 +1,5 @@
 import nimx / [ view, window ]
-import vse_editor
+import visual_script / vs_editor
 
 proc startApplication() =
     let mainWindow = newWindow(newRect(40, 40, 1280, 720))
