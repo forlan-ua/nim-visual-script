@@ -6,7 +6,7 @@ proc startApplication() =
 
     mainWindow.title = "VSE: Visual Script Editor"
 
-    var editor = new(VSNetworkView)
+    var editor = new(VSEditorView)
     editor.init(mainWindow.bounds)
     editor.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
     mainWindow.addSubview(editor)

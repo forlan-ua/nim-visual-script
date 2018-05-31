@@ -1,5 +1,6 @@
 import vse_types
 import vse_port
+import sequtils, strutils
 
 import nimx / [
     types, view, button, text_field, panel_view, context, event,
@@ -37,7 +38,15 @@ proc hostSize*(info: HostInfo, offw: float = 0.0): tuple[size: Size, portSize: S
     result.size = newSize(w,h)
     result.portSize = newSize(max(ops.width, ips.width), 25.0)
 
+proc addFlow(info: HostInfo): HostInfo=
+    var res = info
+    res.inputPorts.insert((name:"Input", typ:VSFLOWTYPE, value:"", active: false), 0)
+    res.outputPorts.insert((name:"Output", typ:VSFLOWTYPE, value:"", active: true), 0)
+    result = res
+
 proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
+    let info = addFlow(info)
+
     result.new()
     result.collapsible = false
     result.name = info.name
@@ -68,18 +77,34 @@ proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
         for pi in info.outputPorts:
             var port = createPortView(pi, op, sizeI.portSize, true)
             outputViews.add(port)
-
-    for p in inputViews:
+    
+    result.input = @[]
+    for i, p in inputViews:
         var list = new(PortViewScrollListner)
         list.port = p
         p.addGestureDetector(newScrollGestureDetector(list))
         p.listner = listner
+        p.host = result
         result.addSubview(p)
+        result.input.add(p)
 
-    for p in outputViews:
+    result.output = @[]
+    for i, p in outputViews:
         var list = new(PortViewScrollListner)
         list.port = p
         p.addGestureDetector(newScrollGestureDetector(list))
         p.listner = listner
-        result.addSubview(p)
+        p.host = result
+        result.addSubview(p)        
+        result.output.add(p)
 
+proc serialize*(h: VSHostView): string = 
+    result = "$1 $2" % [$h.id, h.info.name]
+    for i, p in h.input:
+        if p.info.typ == VSFLOWTYPE: 
+            continue
+
+        if not p.connections.isNil:
+            for con in p.connections:
+                result &= "\n"
+                result &= "$1.$2>$3.$4" % [$h.id, "i" & $(h.input.find(p)+1), $con.host.id, "o" & $(con.host.output.find(con)+1)]

@@ -41,12 +41,16 @@ method draw*(v: VSPortView, rect: Rect)=
 
     let c = currentContext()
 
-    if v.connections.len > 0:
-        c.strokeColor = pinConnectedColor
-        c.fillColor = pinConnectedColor
+    if v.isFlow:
+        c.strokeColor = flowColor
+        c.fillColor = flowColor
     else:
-        c.strokeColor = v.pinColor
-        c.fillColor = pinDefaultColor
+        if v.connections.len > 0:
+            c.strokeColor = pinConnectedColor
+            c.fillColor = pinConnectedColor
+        else:
+            c.strokeColor = v.pinColor
+            c.fillColor = pinDefaultColor
 
     c.strokeWidth = 5.0
     c.drawEllipseInRect(r)

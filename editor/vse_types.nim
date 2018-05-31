@@ -14,15 +14,13 @@ const portStep* = 35.0
 const pinSize* = newSize(25.0, 25.0)
 const pinDefaultColor* = whiteColor()
 const pinConnectedColor* = newColor(0.1, 0.8, 0.2, 1.0)
-
 const pinDragColor* = newColor(0.2, 0.1, 0.8, 1.0)
-
 const pinConnectErrorColor* = newColor(0.8, 0.2, 0.0, 1.0)
 const pinConnectOKColor* = pinConnectedColor
-
+const flowColor* = newColor(0, 0.75, 1.0, 1.0)
 const lineDragColor* = blackColor()
 const lineConnectedColor* = pinConnectedColor
-
+const VSFLOWTYPE* = "VSFlow"
 
 type PortInfo* = tuple
     name: string
@@ -40,18 +38,21 @@ type
         port*: VSPortView
 
     VSPortView* = ref object of View
+        isFlow*: bool
         connections*: seq[VSPortView]
         orientation*: bool
         pinColor*: Color
         info*: PortInfo
         listner*: VSPortListner
-        pinPosition*: Point
+        pinPosition*: Point 
+        host*: VSHostView
 
     VSHostView* = ref object of PanelView
         input*: seq[VSPortView]
         output*: seq[VSPortView]
         info*: HostInfo
         network*: VSNetworkView
+        id*: int
 
     VSPortListner* = ref object
         onPortDrag*: proc(p: Point)
@@ -64,9 +65,15 @@ type
     VSNetworkView* = ref object of View
         hosts*: seq[VSHostView]
         connections*: seq[tuple[a: VSPortView, b: VSPortView]]
-
+        networkContent*: View
+        portsListner*: VSPortListner
         dragStartPort*: VSPortView
         overPort*: VSPortView
         dragStartPoint*: Point
         dragPosition*: Point
+        currHostID*: int
 
+    VSEditorView* = ref object of View
+        networks*: Table[string, VSNetworkView]
+        currentNetwork*: VSNetworkView
+        networksSuperView*: View
