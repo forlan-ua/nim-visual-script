@@ -124,15 +124,9 @@ type VSHost* = ref object of RootObj
 
 method invoke*(vs: VSHost) {.base.} = discard
 method metadata*(vs: VSHost): VSHostMeta {.base.} = discard
-<<<<<<< HEAD:vs_types.nim
-method getPort*(vs: VSHost, name: string): Variant {.base.} = discard
-method connect*(vs: VSHost, port: string, vs2: VSHost, port2: string) {.base.} = discard
-
-=======
 method getPort*(vs: VSHost, name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant {.base.} = discard
 method connect*(vs: VSHost, port: string, port2: Variant) {.base.} = discard
 template connect*(vs: VSHost, port: string, vs2: VSHost, port2: string) = vs.connect(port, vs2.getPort(port2))
->>>>>>> 52456a6c574991717b931447429ff600516bf0e0:visual_script/vs_host.nim
 method destroy*(vs: VSHost) {.base.} = discard
 method invokeFlow*(vs: VSHost) {.base.} =
     vs.frozen = true
@@ -246,11 +240,7 @@ proc generateOriginalFunctionCall(a: NimNode, inputs: seq[InputPortNode]): NimNo
         procName = procName[1]
 
     let invokeRes = nnkCall.newTree(
-<<<<<<< HEAD:vs_types.nim
-        ident(originalProcName)
-=======
         procName
->>>>>>> 52456a6c574991717b931447429ff600516bf0e0:visual_script/vs_host.nim
     )
 
     for i, input in inputs:

@@ -7,8 +7,8 @@ import nimx / [
 
 import os_files.dialog
 
-import ../vs_types
-import ../vs_lib
+import ../vs_host
+import ../vs_std
 import vse_types
 export vse_types
 import vse_colors
