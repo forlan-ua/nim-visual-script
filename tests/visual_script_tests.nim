@@ -85,9 +85,14 @@ MyNetwork2
 var n = Node.new()
 
 generateNetwork(source1)
-# generateNetwork(source2)
+
+registerNetworkDispatcher("TestDispatcher1", {nodeName: string, text: string, child: Node})
 
 echo " "
 dispatchNetwork("TestDispatcher1", "test1", "test2", n)
 echo " "
-dispatchNetwork("TestDispatcher1", "test2", "test2", n)
+dispatchNetwork("TestDispatcher1", "test3", "test4", n)
+
+echo " "
+for d in eachDispatcher():
+    echo d.ports

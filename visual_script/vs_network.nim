@@ -1,4 +1,4 @@
-import tables, variant, macros
+import tables, variant, macros, logging
 import vs_host, vs_std
 
 
@@ -28,37 +28,90 @@ proc getNetworkFromRegistry*(name: string): VSNetwork =
     networksRegistry.getOrDefault(name)
 
 
-var dispatchRegistry = initTable[string, seq[string]]()
+type Dispatcher = ref object
+    event*: string
+    networks*: seq[string]
+    ports*: seq[tuple[name: string, sign: string]]
+
+
+var dispatchRegistry = initTable[string, Dispatcher]()
+
+proc putNetworkDispatcherToRegistry*(event: string, ports: seq[tuple[name: string, sign: string]]) =
+    var dispatcher = dispatchRegistry.getOrDefault(event)
+    if not dispatcher.isNil:
+        if not dispatcher.ports.isNil:
+            raise newException(ValueError, "Dispatcher `" & event & "` has been already registered.")
+        dispatcher.ports = ports
+    else:
+        dispatchRegistry[event] = Dispatcher(event: event, networks: @[], ports: ports)
+
 proc putNetworksToDispatchRegistry*(event: string, networks: varargs[string]) =
-    var nets = dispatchRegistry.getOrDefault(event)
-    if nets.isNil:
-        nets = @[]
+    var dispatcher = dispatchRegistry.getOrDefault(event)
+    if dispatcher.isNil:
+        dispatcher = Dispatcher(event: event, networks: @[])
     for net in networks:
-        if nets.find(net) == -1:
-            nets.add(net)
-    dispatchRegistry[event] = nets
+        if dispatcher.networks.find(net) == -1:
+            dispatcher.networks.add(net)
+    dispatchRegistry[event] = dispatcher
 
 proc removeNetworksFromDispatchRegistry*(event: string, networks: varargs[string]) =
-    var nets = dispatchRegistry.getOrDefault(event)
-    if nets.isNil:
+    var dispatcher = dispatchRegistry.getOrDefault(event)
+    if dispatcher.isNil:
+        warn "Dispatcher `" & event & "` has not been registered."
         return
     for net in networks:
-        let ind = nets.find(net)
+        let ind = dispatcher.networks.find(net)
         if ind > -1:
-            nets.del(ind)
-    dispatchRegistry[event] = nets
+            dispatcher.networks.del(ind)
 
 iterator eachNetwork*(event: string): FlowForNetwork =
-    let networks = dispatchRegistry.getOrDefault(event)
-    for net in networks:
-        let n = getNetworkFromRegistry(net)
-        if not n.isNil:
-            let flow = n.flows.getOrDefault(event)
-            if not flow.isNil:
-                yield flow
+    let dispatcher = dispatchRegistry.getOrDefault(event)
+    if not dispatcher.isNil and dispatcher.ports.isNil:
+        for net in dispatcher.networks:
+            let n = getNetworkFromRegistry(net)
+            if not n.isNil:
+                let flow = n.flows.getOrDefault(event)
+                if not flow.isNil:
+                    yield flow
+
+iterator eachDispatcher*(): Dispatcher =
+    for d in dispatchRegistry.values():
+        if not d.ports.isNil:
+            yield d
 
 macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
-    var res = nnkStmtList.newTree()
+    result = nnkCall.newTree(
+        ident("dispatchNetwork_" & $event)
+    )
+    for arg in args:
+        result.add(arg)
+
+proc genVsDispatcherReg(name, args: NimNode): NimNode =
+    let argsBody = nnkBracket.newTree()
+    result = nnkCall.newTree(
+        ident("putNetworkDispatcherToRegistry"),
+        name,
+        prefix(argsBody, "@")
+    )
+    for i, arg in args:
+        argsBody.add(
+            nnkPar.newTree(
+                newLit($arg[0]),
+                newLit($arg[1])
+            )
+        )
+        
+
+proc genVsDispatcherProc(name, args: NimNode): NimNode =
+    result = newProc(
+        postfix(ident("dispatchNetwork_" & $name), "*"),
+        [newEmptyNode()],
+        newStmtList()
+    )
+    
+    let n = genSym(nskForVar, "n")
+    let res = nnkStmtList.newTree()
+    
     proc portData(i: int, arg: NimNode): NimNode =
         nnkCall.newTree(
             nnkDotExpr.newTree(
@@ -66,7 +119,7 @@ macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
                     nnkDotExpr.newTree(
                         nnkBracketExpr.newTree(
                             nnkDotExpr.newTree(
-                                ident("n"),
+                                n,
                                 ident("ports")
                             ),
                             newLit(i)
@@ -75,43 +128,56 @@ macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
                     ),
                     nnkBracketExpr.newTree(
                         ident("VSPort"),
-                        nnkDotExpr.newTree(
-                            arg,
-                            ident("type")
-                        )
+                        arg[1]
                     )
                 ),
                 ident("write")
             ),
-            arg
+            arg[0]
         )
-
+    
+    let forbody = nnkStmtList.newTree()
     res.add(
         nnkForStmt.newTree(
-            newIdentNode("n"),
+            n,
             nnkCall.newTree(
                 newIdentNode("eachNetwork"),
-                event
+                name
             ),
-            nnkStmtList.newTree()
+            forbody
         )
     )
 
     for i, arg in args:
-        res[0][2].add(portData(i, arg))
+        result.params.add(
+            nnkIdentDefs.newTree(
+                arg[0],
+                arg[1],
+                newEmptyNode()
+            )
+        )
+        forbody.add(portData(i, arg))
 
-    res[0][2].add(
+    forbody.add(
         nnkCall.newTree(
             nnkDotExpr.newTree(
-                newIdentNode("n"),
+                n,
                 newIdentNode("run")
             )
         )
     )
 
-    result = res
+    result.body = res
+
+
+macro registerNetworkDispatcher*(name: untyped, args: untyped): typed =
+    result = nnkStmtList.newTree(
+        genVsDispatcherReg(name, args),
+        genVsDispatcherProc(name, args)
+    )
 
     echo repr(result)
+
 
 proc generateNetwork*(source: string): VSNetwork {.discardable.} =
     let net = VSNetwork.new()
