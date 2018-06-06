@@ -25,6 +25,9 @@ method connect*(vs: StringLitVSHost; port: string; port2: Variant) =
     if port == "o0":
       vs.o0.connect(port2)
 
+method metadata*(vs: StringLitVSHost): VSHostMeta =
+  return ("StringLitVSHost", "StringLiteral", @[], @[("output", "string", "")])
+
 putHostToRegistry(StringLitVSHost, proc(): VSHost = newStringLitVSHost())
 
 

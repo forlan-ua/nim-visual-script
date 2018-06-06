@@ -100,7 +100,6 @@ proc onPortOverOut*(v: VSNetworkView, p: VSPortView) =
     v.setNeedsDisplay()
     v.overPort = nil
 
-
 proc disconnectHost*(v: VSNetworkView, host: VSHostView)=
     if not host.input.isNil:
         for p in host.input:
@@ -163,7 +162,7 @@ method init*(v: VSNetworkView, r: Rect) =
 proc drawConLine(p1, p2: Point)=
     let a = p1
     let b = p2
-    let off = newPoint(min(abs(a.x - b.x), 200), 0.0)
+    let off = newPoint(min(max(abs(a.x - b.x)*0.5, 40.0), 200), 0.0)
     let aa = p1 - off
     let bb = p2 + off
     currentContext().drawBezier(a, aa, bb, b)

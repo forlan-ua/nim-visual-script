@@ -46,6 +46,7 @@ type
         listner*: VSPortListner
         pinPosition*: Point 
         host*: VSHostView
+        defaultValue*: string
 
     VSHostView* = ref object of PanelView
         input*: seq[VSPortView]
@@ -77,3 +78,6 @@ type
         networks*: Table[string, VSNetworkView]
         currentNetwork*: VSNetworkView
         networksSuperView*: View
+
+proc canHandleDefaultValue*(v: VSPortView): bool = 
+    v.info.typ in ["bool", "int", "int8", "int16", "int32", "string", "char", "float"]

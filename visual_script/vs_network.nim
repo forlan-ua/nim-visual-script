@@ -28,11 +28,12 @@ proc getNetworkFromRegistry*(name: string): VSNetwork =
     networksRegistry.getOrDefault(name)
 
 
-type Dispatcher = ref object
+type Dispatcher* = ref object
     event*: string
     networks*: seq[string]
     ports*: seq[tuple[name: string, sign: string]]
 
+type DispatcherMeta* = tuple[name: string, ports:seq[tuple[name: string, sign: string]]]
 
 var dispatchRegistry = initTable[string, Dispatcher]()
 
@@ -63,6 +64,10 @@ proc removeNetworksFromDispatchRegistry*(event: string, networks: varargs[string
         let ind = dispatcher.networks.find(net)
         if ind > -1:
             dispatcher.networks.del(ind)
+
+proc metadata*(disp: Dispatcher): DispatcherMeta=
+    result.name = disp.event
+    result.ports = disp.ports
 
 iterator eachNetwork*(event: string): FlowForNetwork =
     let dispatcher = dispatchRegistry.getOrDefault(event)
