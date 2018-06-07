@@ -38,15 +38,7 @@ proc hostSize*(info: HostInfo, offw: float = 0.0): tuple[size: Size, portSize: S
     result.size = newSize(w,h)
     result.portSize = newSize(max(ops.width, ips.width), 25.0)
 
-proc addFlow(info: HostInfo): HostInfo=
-    var res = info
-    res.inputPorts.insert((name:"Input", typ:VSFLOWTYPE, value:"", active: false), 0)
-    res.outputPorts.insert((name:"Output", typ:VSFLOWTYPE, value:"", active: true), 0)
-    result = res
-
 proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
-    let info = addFlow(info)
-
     result.new()
     result.collapsible = false
     result.name = info.name
