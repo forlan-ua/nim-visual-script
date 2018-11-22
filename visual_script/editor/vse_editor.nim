@@ -20,12 +20,6 @@ import vse_menu_panel
 import vse_network
 import vse_metadata_cache
 
-# proc newNetworkView(r: Rect, creator:VSEHostCreator = nil, data:string = ""): VSNetworkView=
-#     result.new()
-#     result.init(r)
-#     if data.len > 0:
-#         result.deserialize(data, creator)
-
 proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
     if nv.name notin v.networks:
         v.networks[nv.name] = nv
@@ -75,21 +69,6 @@ method init*(v: VSEditorView, r:Rect)=
 
     var sidePanel = createSidePanel(newRect(0.0, 20.0, 200.0, r.height - 20.0))
     v.addSubview(sidePanel)
-    sidePanel.onHostAdd = v.hostCreator()
-
-
-    # var registryView = newView(newRect(0,20, 200, r.height))
-    # registryView.backgroundColor = newColor(0.7, 0.7, 0.7, 1.0)
-    # var y = 0.0
-
-    # for host in walkHostRegistry():
-    #     echo "host ", host.name , " metadata ", host.metadata
-    #     let rv = createRegisteredHostView(newRect(0, y, 200.0, 60.0), host.metadata.typeName, v.currentNetwork.onAddHostView(host))
-    #     registryView.addSubview(rv)
-    #     y += 65.0
-
-    # var scroll = newScrollView(registryView)
-    # v.addSubview(scroll)
 
     var panel = createVSMenu(newRect(0.0, 0.0, r.width, 20.0))
     v.addSubview(panel)
@@ -110,7 +89,7 @@ method init*(v: VSEditorView, r:Rect)=
                 v.currentNetwork = nv
                 v.addNetworkView(nv)
                 nv.deserialize(data, v.hostCreator())
-            # echo "load network ", data
+
 
     panel.addMenuWithHandler("File/Save") do():
         var di: DialogInfo
