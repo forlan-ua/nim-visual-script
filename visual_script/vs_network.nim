@@ -40,7 +40,7 @@ var dispatchRegistry = initTable[string, Dispatcher]()
 proc putNetworkDispatcherToRegistry*(event: string, ports: seq[tuple[name: string, sign: string]]) =
     var dispatcher = dispatchRegistry.getOrDefault(event)
     if not dispatcher.isNil:
-        if not dispatcher.ports.isNil:
+        if dispatcher.ports.len > 0:
             raise newException(ValueError, "Dispatcher `" & event & "` has been already registered.")
         dispatcher.ports = ports
     else:
@@ -71,7 +71,7 @@ proc metadata*(disp: Dispatcher): DispatcherMeta=
 
 iterator eachNetwork*(event: string): FlowForNetwork =
     let dispatcher = dispatchRegistry.getOrDefault(event)
-    if not dispatcher.isNil and dispatcher.ports.isNil:
+    if not dispatcher.isNil and dispatcher.ports.len > 0:
         for net in dispatcher.networks:
             let n = getNetworkFromRegistry(net)
             if not n.isNil:
@@ -81,7 +81,7 @@ iterator eachNetwork*(event: string): FlowForNetwork =
 
 iterator eachDispatcher*(): Dispatcher =
     for d in dispatchRegistry.values():
-        if not d.ports.isNil:
+        if d.ports.len > 0:
             yield d
 
 macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
@@ -105,7 +105,7 @@ proc genVsDispatcherReg(name, args: NimNode): NimNode =
                 newLit($arg[1])
             )
         )
-        
+
 
 proc genVsDispatcherProc(name, args: NimNode): NimNode =
     result = newProc(
@@ -113,10 +113,10 @@ proc genVsDispatcherProc(name, args: NimNode): NimNode =
         [newEmptyNode()],
         newStmtList()
     )
-    
+
     let n = genSym(nskForVar, "n")
     let res = nnkStmtList.newTree()
-    
+
     proc portData(i: int, arg: NimNode): NimNode =
         nnkCall.newTree(
             nnkDotExpr.newTree(
@@ -140,7 +140,7 @@ proc genVsDispatcherProc(name, args: NimNode): NimNode =
             ),
             arg[0]
         )
-    
+
     let forbody = nnkStmtList.newTree()
     res.add(
         nnkForStmt.newTree(
@@ -188,7 +188,7 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
     let net = VSNetwork.new()
     net.hosts = @[]
     net.flows = initTable[string, FlowForNetwork]()
-    
+
     var start: int
     start += source.parseUntil(net.name, '\n', start) + 1
     start.inc
@@ -198,7 +198,7 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
 
     var localId: string
     var name: string
-    
+
     echo "<<<<<<<<<<<<<<<<<<<<<<"
     echo net.name
     echo " "
@@ -218,14 +218,14 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
 
         echo name
     start.inc
-    
+
     echo " "
     echo "Parse Dispatchers:"
 
     while source[start] != '\n':
         start += source.parseUntil(localId, ' ', start) + 1
         start += source.parseUntil(name, '\n', start) + 1
-        
+
         net.hosts.add(getHostFromRegistry(name))
         localHostMapper[localId] = net.hosts.high
 
@@ -286,7 +286,7 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
                 host1.IfVSHost.flow.add(host2)
             of '-':
                 start += source.parseUntil(host2LocalId, '\n', start + 1) + 2
-                
+
                 let host1 = net.hosts[localHostMapper[host1LocalId]]
                 let host2 = net.hosts[localHostMapper[host2LocalId]]
 

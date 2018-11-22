@@ -69,7 +69,7 @@ proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
         for pi in info.outputPorts:
             var port = createPortView(pi, op, sizeI.portSize, true)
             outputViews.add(port)
-    
+
     result.input = @[]
     for i, p in inputViews:
         var list = new(PortViewScrollListner)
@@ -87,16 +87,16 @@ proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
         p.addGestureDetector(newScrollGestureDetector(list))
         p.listner = listner
         p.host = result
-        result.addSubview(p)        
+        result.addSubview(p)
         result.output.add(p)
 
-proc serialize*(h: VSHostView): string = 
+proc serialize*(h: VSHostView): string =
     result = "$1 $2" % [$h.id, h.info.name]
     for i, p in h.input:
-        if p.info.typ == VSFLOWTYPE: 
+        if p.info.typ == VSFLOWTYPE:
             continue
 
-        if not p.connections.isNil:
+        if p.connections.len > 0:
             for con in p.connections:
                 result &= "\n"
                 result &= "$1.$2>$3.$4" % [$h.id, "i" & $(h.input.find(p)+1), $con.host.id, "o" & $(con.host.output.find(con)+1)]

@@ -25,16 +25,16 @@ proc metaToInfo(meta: VSHostMeta): HostInfo=
     info.name = meta.typeName
     info.inputPorts = @[]
     info.inputPorts.add((name:"Input", typ:VSFLOWTYPE, value:"", active: false))
-    if not meta.inputs.isNil:
+    if meta.inputs.len > 0:
         for i in meta.inputs:
             info.inputPorts.add((name: i.name, typ: i.sign, value: i.default, active: false))
-    
+
     info.outputPorts = @[]
     info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if not meta.outputs.isNil:
+    if meta.outputs.len > 0:
         for i in meta.outputs:
             info.outputPorts.add((name: i.name, typ: i.sign, value: i.default, active: true))
-    
+
     result = info
 
 proc metaToInfo(meta: DispatcherMeta): HostInfo=
@@ -44,10 +44,10 @@ proc metaToInfo(meta: DispatcherMeta): HostInfo=
 
     info.outputPorts = @[]
     info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if not meta.ports.isNil:
+    if meta.ports.len > 0:
         for i in meta.ports:
             info.outputPorts.add((name: i.name, typ: i.sign, value: "", active: true))
-        
+
     result = info
     echo "MetaToInfo dispatcher ", meta, " info ", info
 
@@ -97,11 +97,11 @@ proc createSidePanel*(r: Rect): VSSidePanelView=
     v.hostMetaCache = @[]
     for host in walkHostRegistry():
         v.hostMetaCache.add(host.metadata)
-    
+
     v.dispatcherCache = @[]
     for disp in eachDispatcher():
         v.dispatcherCache.add(disp.metadata)
-    
+
     let sc = SegmentedControl.new(newRect(0, 0, r.width, 22))
     sc.segments = @["Hosts", "Dispatchers"]
     sc.autoresizingMask = { afFlexibleWidth, afFlexibleMaxY }
@@ -126,9 +126,9 @@ proc createSidePanel*(r: Rect): VSSidePanelView=
     var scroll = newScrollView(newRect(0, 50, r.width, r.height - 50))
     scroll.contentView = newStackView(zeroRect)
     v.addSubview(scroll)
-    
+
     v.content = scroll.contentView
-    
+
     v.loadHosts()
 
     result = v

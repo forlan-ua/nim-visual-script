@@ -13,15 +13,6 @@ import vse_host
 import vse_port
 
 proc connect*(v: VSNetworkView, a, b: VSPortView)=
-    if a.connections.isNil:
-        a.connections = @[]
-
-    if b.connections.isNil:
-        b.connections = @[]
-
-    if v.connections.isNil:
-        v.connections = @[]
-
     if a notin b.connections and b notin a.connections:
         a.connections.add(b)
         b.connections.add(a)
@@ -101,17 +92,11 @@ proc onPortOverOut*(v: VSNetworkView, p: VSPortView) =
     v.overPort = nil
 
 proc disconnectHost*(v: VSNetworkView, host: VSHostView)=
-    if not host.input.isNil:
-        for p in host.input:
-            v.disconnect(p)
-    else:
-        echo "input ports is nil"
+    for p in host.input:
+        v.disconnect(p)
 
-    if not host.output.isNil:
-        for p in host.output:
-            v.disconnect(p)
-    else:
-        echo "ouput ports is nil"
+    for p in host.output:
+        v.disconnect(p)
 
 proc removeHostVies*(v: VSNetworkView, host: VSHostView)=
     v.disconnectHost(host)
@@ -124,13 +109,43 @@ proc serialize*(v: VSNetworkView): string =
     for h in v.hosts:
         let sh = h.serialize()
         result &= sh & "\n\n"
-    
+
     #todo: Serialize flow here
 
     #todo: Serialize view here
 
-proc deserialize*(v: VSNetworkView, data: string) = 
-    discard
+proc deserialize*(v: VSNetworkView, data: string) =
+    type NetworkDataState {.pure.} = enum
+        name, dispatchers, hosts, links, flow, eof
+
+    var state = NetworkDataState.name
+    proc nextState(s: var NetworkDataState)=
+        if s != NetworkDataState.eof:
+            var si = s.int
+            si += 1
+            s = si.NetworkDataState
+
+    for line in data.splitLines():
+        var line = line
+        line.trimZeros()
+        if line.len == 0:
+            state.nextState
+            continue
+
+        case state:
+        of NetworkDataState.name:
+            v.name = line
+        of NetworkDataState.dispatchers:
+            echo "dispatcher: ", line
+        of NetworkDataState.hosts:
+            echo "host: ", line
+        of NetworkDataState.links:
+            echo "links: ", line
+        of NetworkDataState.flow:
+            echo "flow: ", line
+        else:
+            echo "EOF VSN"
+            break
 
 method init*(v: VSNetworkView, r: Rect) =
     procCall v.View.init(r)
@@ -153,7 +168,7 @@ method init*(v: VSNetworkView, r: Rect) =
 
     v.portsListner.onPortOverOut = proc(p: VSPortView) =
         v.onPortOverOut(p)
-    
+
     v.networkContent = newView(newRect(0.0, 0.0, r.width - 200.0, r.height))
 
     var networkScroll = newScrollView(v.networkContent)
@@ -190,4 +205,3 @@ method draw*(v: VSNetworkView, r: Rect)=
             let a = con.a.portPinPosition
             let b = con.b.portPinPosition
             drawConLine(a, b)
-

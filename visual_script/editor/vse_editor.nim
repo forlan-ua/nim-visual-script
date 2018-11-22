@@ -19,10 +19,10 @@ import vse_port
 import vse_menu_panel
 import vse_network
 
-proc newNetworkView(r: Rect, data:string = nil): VSNetworkView=
+proc newNetworkView(r: Rect, data:string = ""): VSNetworkView=
     result.new()
     result.init(r)
-    if not data.isNil:
+    if data.len > 0:
         result.deserialize(data)
 
 proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
@@ -63,7 +63,7 @@ method init*(v: VSEditorView, r:Rect)=
             echo "try remove hostV ", hostV.name
 
         hostV.addSubview(remHostBtn)
-        
+
         hostV.id = cn.currHostID
         inc cn.currHostID
 
@@ -97,7 +97,7 @@ method init*(v: VSEditorView, r:Rect)=
             var nv = newNetworkView(v.networkRect, data)
             v.addNetworkView(nv)
             echo "load network ", data
-    
+
     panel.addMenuWithHandler("File/Save") do():
         var di: DialogInfo
         di.kind = dkSaveFile
@@ -111,11 +111,9 @@ method init*(v: VSEditorView, r:Rect)=
 
     panel.addMenuWithHandler("View/Registry") do():
         echo "toggle registry"
-    
+
     panel.addMenuWithHandler("View/Some/Test") do():
         echo "sas"
 
     panel.addMenuWithHandler("About/WTF") do():
         echo "wtf"
-
-

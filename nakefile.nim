@@ -3,7 +3,7 @@ import osproc, os
 
 beforeBuild = proc(b: Builder) =
     b.disableClosureCompiler = false
-    b.mainFile = "main"
+    b.mainFile = "tests/main"
 
 task "editor", "Build and run samples":
     newBuilder().build()
