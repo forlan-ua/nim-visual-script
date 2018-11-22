@@ -1,4 +1,4 @@
-import strutils
+import strutils, tables
 
 import nimx / [
     types, view, button, text_field, panel_view, context, event,
@@ -11,6 +11,7 @@ export vse_types
 import vse_colors
 import vse_host
 import vse_port
+import vse_metadata_cache
 
 proc connect*(v: VSNetworkView, a, b: VSPortView)=
     if a notin b.connections and b notin a.connections:
@@ -114,9 +115,9 @@ proc serialize*(v: VSNetworkView): string =
 
     #todo: Serialize view here
 
-proc deserialize*(v: VSNetworkView, data: string) =
+proc deserialize*(v: VSNetworkView, data: string, creator: VSEHostCreator) =
     type NetworkDataState {.pure.} = enum
-        name, dispatchers, hosts, links, flow, eof
+        name, dispatchers, hosts, links, flow, vsemeta, eof
 
     var state = NetworkDataState.name
     proc nextState(s: var NetworkDataState)=
@@ -125,9 +126,72 @@ proc deserialize*(v: VSNetworkView, data: string) =
             si += 1
             s = si.NetworkDataState
 
+    var hosts = initTable[int, VSHostView]()
+
+    proc extractHost(line: string)=
+        try:
+            var sline = line.split(" ")
+            var id = parseInt(sline[0])
+            var host: VSHostView
+            for di in vsDispatchersInMeta():
+                if di.name == sline[1]:
+                    host = creator(di)
+                    break
+
+            if host.isNil:
+                for hi in vsHostsInMeta():
+                    echo "find host ", sline[1], " ?? ", hi.name
+                    if hi.name == sline[1]:
+                        host = creator(hi)
+                        break
+
+            if not host.isNil:
+                hosts[id] = host
+            else:
+                echo "host not created ", line
+        except:
+            echo "FAILED: extracting host >>", line, "<<"
+
+    proc linkHosts(line: string) =
+        for sep in [">", "="]:
+            if line.find(sep) > 0:
+                var sline = line.split(sep)
+                var i = sline[0].split(".")
+                var iid = i[0].parseInt()
+                var ip = i[1][1 .. ^1].parseInt() + 1
+
+                var ih = hosts.getOrDefault(iid)
+                if ih.isNil:
+                    echo "LINKAGE FAILED >>", line, "<<"
+                    continue
+
+
+                if sep == "=":
+                    discard
+                else:
+                    var o = sline[1].split(".")
+                    var oid = o[0].parseInt()
+                    # echo "output ", o, " oid ", oid
+                    var op = o[1][1 .. ^1].parseInt() + 1
+
+                    var oh = hosts.getOrDefault(oid)
+                    echo "link ", ip, " >> ", op, " line ", line, " hosts ", @[ih.info, oh.info]
+                    v.connect(ih.input[ip], oh.output[op])
+
+    proc linkFlow(line:string)=
+        var sline = line.split(">")
+        if sline[1][0] in "+-": #if statement
+            discard
+        else:
+            var iid = sline[0].parseInt()
+            var oid = sline[1].parseInt()
+            var ih = hosts.getOrDefault(iid)
+            var oh = hosts.getOrDefault(oid)
+            if not ih.isNil and not oh.isNil:
+                v.connect(ih.output[0], oh.input[0])
+
     for line in data.splitLines():
         var line = line
-        line.trimZeros()
         if line.len == 0:
             state.nextState
             continue
@@ -135,14 +199,14 @@ proc deserialize*(v: VSNetworkView, data: string) =
         case state:
         of NetworkDataState.name:
             v.name = line
-        of NetworkDataState.dispatchers:
-            echo "dispatcher: ", line
-        of NetworkDataState.hosts:
-            echo "host: ", line
+        of NetworkDataState.dispatchers, NetworkDataState.hosts:
+            extractHost(line)
         of NetworkDataState.links:
-            echo "links: ", line
+            linkHosts(line)
         of NetworkDataState.flow:
-            echo "flow: ", line
+            linkFlow(line)
+        of NetworkDataState.vsemeta:
+            echo "vse meta: ", line
         else:
             echo "EOF VSN"
             break

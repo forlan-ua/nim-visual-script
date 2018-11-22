@@ -11,45 +11,15 @@ import visual_script.vs_network
 import visual_script.vs_std
 
 import vse_types
+import vse_metadata_cache
 
 type VSSidePanelView* = ref object of View
-    onHostAdd*: proc(meta: HostInfo)
+    onHostAdd*: VSEHostCreator
     onChanged: proc()
     hostMetaCache: seq[VSHostMeta]
     dispatcherCache: seq[DispatcherMeta]
     filter: TextField
     content: View
-
-proc metaToInfo(meta: VSHostMeta): HostInfo=
-    var info: HostInfo
-    info.name = meta.typeName
-    info.inputPorts = @[]
-    info.inputPorts.add((name:"Input", typ:VSFLOWTYPE, value:"", active: false))
-    if meta.inputs.len > 0:
-        for i in meta.inputs:
-            info.inputPorts.add((name: i.name, typ: i.sign, value: i.default, active: false))
-
-    info.outputPorts = @[]
-    info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if meta.outputs.len > 0:
-        for i in meta.outputs:
-            info.outputPorts.add((name: i.name, typ: i.sign, value: i.default, active: true))
-
-    result = info
-
-proc metaToInfo(meta: DispatcherMeta): HostInfo=
-    var info: HostInfo
-    info.name = meta.name
-    info.inputPorts = @[]
-
-    info.outputPorts = @[]
-    info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if meta.ports.len > 0:
-        for i in meta.ports:
-            info.outputPorts.add((name: i.name, typ: i.sign, value: "", active: true))
-
-    result = info
-    echo "MetaToInfo dispatcher ", meta, " info ", info
 
 proc createRegisteredHostView(r: Rect, name: string, cb: proc()): View =
     result = newView(r)
@@ -66,7 +36,7 @@ proc onItemClick[T](v: VSSidePanelView, meta: T): proc()=
     let info = meta.metaToInfo()
     result = proc()=
         if not v.onHostAdd.isNil:
-            v.onHostAdd(info)
+            discard v.onHostAdd(info)
 
 proc clearContent(v: VSSidePanelView)=
     while v.content.subviews.len > 0:
