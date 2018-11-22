@@ -80,6 +80,10 @@ type
         currentNetwork*: VSNetworkView
         networksSuperView*: View
 
+    VSETfPopup* = ref object of PanelView
+        onText*: proc(str: string)
+    VSEFindPopup* = ref object of VSETfPopup
+
     VSEHostCreator* = proc(info: HostInfo): VSHostView
 
 proc canHandleDefaultValue*(v: VSPortView): bool =

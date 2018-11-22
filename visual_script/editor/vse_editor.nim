@@ -10,15 +10,17 @@ import os_files.dialog
 import visual_script.vs_host
 import visual_script.vs_std
 
-import vse_side_panel
 import vse_types
 export vse_types
+
+import vse_side_panel
 import vse_colors
 import vse_host
 import vse_port
 import vse_menu_panel
 import vse_network
 import vse_metadata_cache
+import vse_popup
 
 proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
     if nv.name notin v.networks:
@@ -68,6 +70,7 @@ method init*(v: VSEditorView, r:Rect)=
     v.currentNetwork = emptyNetwork
 
     var sidePanel = createSidePanel(newRect(0.0, 20.0, 200.0, r.height - 20.0))
+    sidePanel.onHostAdd = v.hostCreator()
     v.addSubview(sidePanel)
 
     var panel = createVSMenu(newRect(0.0, 0.0, r.width, 20.0))
@@ -101,6 +104,17 @@ method init*(v: VSEditorView, r:Rect)=
         if path.len > 0:
             writeFile(path, v.currentNetwork.serialize)
             echo "save to ", path
+
+    panel.addMenuWithHandler("Edit/Reload Cache") do():
+        reloadCache()
+        sidePanel.onChanged()
+
+    panel.addMenuWithHandler("Edit/Rename Network") do():
+        let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
+        if ti >= 0:
+            v.newTfPopup(continuous = false) do(str: string):
+                v.currentNetwork.name = str
+                v.networksSuperView.TabView.setTitleOfTab(str, ti)
 
     panel.addMenuWithHandler("View/Registry") do():
         echo "toggle registry"

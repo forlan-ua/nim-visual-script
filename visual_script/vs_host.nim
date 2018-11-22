@@ -708,11 +708,11 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 
     compileTimeRegistry[originalProcName] = result
 
-    echo repr(result)
+    # echo repr(result)
 
 
 macro vshost*(procDef: untyped, a: untyped = nil): typed =
-    echo treeRepr(procDef), " \na ", if not a.isNil: treeRepr(a) else: "nil"
+    # echo treeRepr(procDef), " \na ", if not a.isNil: treeRepr(a) else: "nil"
     if not a.isNil and a.kind != nnkNilLit:
         toVsHost($a, procDef)
     else:

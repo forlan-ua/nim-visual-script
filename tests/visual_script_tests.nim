@@ -88,13 +88,13 @@ generateNetwork(source1)
 
 registerNetworkDispatcher("TestDispatcher1", {nodeName: string, text: string, child: Node})
 
-echo " "
+# echo " "
 dispatchNetwork("TestDispatcher1", "test1", "test2", n)
-echo " "
+# echo " "
 dispatchNetwork("TestDispatcher1", "test3", "test4", n)
 
 # dispatchNetwork_TestDispatcher1("test1", "test3", n)
 
-echo " "
+# echo " "
 for d in eachDispatcher():
     echo d.ports

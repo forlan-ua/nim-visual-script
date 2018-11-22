@@ -15,9 +15,9 @@ import vse_metadata_cache
 
 type VSSidePanelView* = ref object of View
     onHostAdd*: VSEHostCreator
-    onChanged: proc()
-    hostMetaCache: seq[VSHostMeta]
-    dispatcherCache: seq[DispatcherMeta]
+    onChanged*: proc()
+    # hostMetaCache: seq[VSHostMeta]
+    # dispatcherCache: seq[DispatcherMeta]
     filter: TextField
     content: View
 
@@ -27,15 +27,16 @@ proc createRegisteredHostView(r: Rect, name: string, cb: proc()): View =
     var btn = newButton(newRect(0, 25.0, 40.0, 20.0))
     btn.title = "Add"
     btn.onAction do():
+        echo "cb1 ", name
         cb()
     result.addSubview(btn)
     result.backgroundColor = newColor(0.5,0.5,0.5, 0.96)
 
-proc onItemClick[T](v: VSSidePanelView, meta: T): proc()=
-    let meta = meta
-    let info = meta.metaToInfo()
+proc onItemClick[T](v: VSSidePanelView, info: T): proc()=
     result = proc()=
+        echo "cb 2 ", info.name
         if not v.onHostAdd.isNil:
+            echo "cb 3 ", info.name
             discard v.onHostAdd(info)
 
 proc clearContent(v: VSSidePanelView)=
@@ -44,33 +45,21 @@ proc clearContent(v: VSSidePanelView)=
 
 proc loadHosts(v: VSSidePanelView)=
     v.clearContent()
-    v.hostMetaCache.sort do(a,b:VSHostMeta) -> int:
-        result = cmp(a.typeName, b.typeName)
-    for i, meta in v.hostMetaCache:
-        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in meta.typeName.toLowerAscii):
-            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), meta.typeName, v.onItemClick(meta))
+    for info in vsHostsInMeta():
+        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in info.name.toLowerAscii):
+            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), info.name, v.onItemClick(info))
             v.content.addSubview(h)
     v.setNeedsDisplay()
 
 proc loadDispatchers(v: VSSidePanelView)=
     v.clearContent()
-    v.dispatcherCache.sort do(a,b: DispatcherMeta) -> int:
-        result = cmp(a.name, b.name)
-    for i, meta in v.dispatcherCache:
-        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in meta.name.toLowerAscii):
-            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), meta.name, v.onItemClick(meta))
+    for info in vsDispatchersInMeta():
+        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in info.name):
+            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), info.name, v.onItemClick(info))
             v.content.addSubview(h)
 
 proc createSidePanel*(r: Rect): VSSidePanelView=
     let v = new(VSSidePanelView, r)
-
-    v.hostMetaCache = @[]
-    for host in walkHostRegistry():
-        v.hostMetaCache.add(host.metadata)
-
-    v.dispatcherCache = @[]
-    for disp in eachDispatcher():
-        v.dispatcherCache.add(disp.metadata)
 
     let sc = SegmentedControl.new(newRect(0, 0, r.width, 22))
     sc.segments = @["Hosts", "Dispatchers"]
@@ -99,6 +88,6 @@ proc createSidePanel*(r: Rect): VSSidePanelView=
 
     v.content = scroll.contentView
 
-    v.loadHosts()
+    v.onChanged()
 
     result = v

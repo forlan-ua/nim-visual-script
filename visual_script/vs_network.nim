@@ -181,7 +181,7 @@ macro registerNetworkDispatcher*(name: untyped, args: untyped): typed =
         genVsDispatcherProc(name, args)
     )
 
-    echo repr(result)
+    # echo repr(result)
 
 
 proc generateNetwork*(source: string): VSNetwork {.discardable.} =
@@ -199,10 +199,10 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
     var localId: string
     var name: string
 
-    echo "<<<<<<<<<<<<<<<<<<<<<<"
-    echo net.name
-    echo " "
-    echo "Parse Dispatchers:"
+    # echo "<<<<<<<<<<<<<<<<<<<<<<"
+    # echo net.name
+    # echo " "
+    # echo "Parse Dispatchers:"
 
     while source[start] != '\n':
         start += source.parseUntil(localId, ' ', start) + 1
@@ -216,11 +216,11 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
 
         putNetworksToDispatchRegistry(name, net.name)
 
-        echo name
+        # echo name
     start.inc
 
-    echo " "
-    echo "Parse Dispatchers:"
+    # echo " "
+    # echo "Parse Dispatchers:"
 
     while source[start] != '\n':
         start += source.parseUntil(localId, ' ', start) + 1
@@ -229,11 +229,11 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
         net.hosts.add(getHostFromRegistry(name))
         localHostMapper[localId] = net.hosts.high
 
-        echo name
+        # echo name
     start.inc
 
-    echo " "
-    echo "Parse Ports:"
+    # echo " "
+    # echo "Parse Ports:"
 
     var host1LocalId, port1Name: string
     var host2LocalId, port2Name: string
@@ -249,7 +249,7 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
             if localHostMapper.hasKey(host2LocalId):
                 let host1 = net.hosts[localHostMapper[host1LocalId]]
                 let host2 = net.hosts[localHostMapper[host2LocalId]]
-                echo "Connect Port `", host1.name, ".", port1Name, "` to `", host2.name, ".", port2Name, "`"
+                # echo "Connect Port `", host1.name, ".", port1Name, "` to `", host2.name, ".", port2Name, "`"
                 host1.connect(port1Name, host2, port2Name)
             else:
                 let host = net.hosts[localHostMapper[host1LocalId]]
@@ -260,8 +260,8 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
                     flow.ports.setLen(ind + 1)
                 if flow.ports[ind].isEmpty:
                     flow.ports[ind] = host.getPort(port1Name, clone=true)
-                    echo "Save port `", host.name, ".", port1Name, "` as `", ind, "` input for dispatcher ", flowName
-                echo "Connect Port `", host.name, ".", port1Name, "` to `", flowName, ".", ind, "`"
+                #     echo "Save port `", host.name, ".", port1Name, "` as `", ind, "` input for dispatcher ", flowName
+                # echo "Connect Port `", host.name, ".", port1Name, "` to `", flowName, ".", ind, "`"
                 host.connect(port1Name, flow.ports[ind])
         elif source[start] == '=':
             assert(net.hosts[localHostMapper[host1LocalId]] of LitVSHost)
@@ -271,8 +271,8 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
             host.LitVSHost.setValue(port2Name)
     start.inc
 
-    echo " "
-    echo "Parse Flow"
+    # echo " "
+    # echo "Parse Flow"
 
     while source[start] notin {'\n', '#'}:
         start += source.parseUntil(host1LocalId, '>', start) + 1
@@ -302,7 +302,7 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
                     let host = net.hosts[localHostMapper[host2LocalId]]
                     flow.accessPoints.add(host)
 
-    echo ">>>>>>>>>>>>>>>>>>>>>>>"
+    # echo ">>>>>>>>>>>>>>>>>>>>>>>"
     putNetworkToRegistry(net)
 
     result = net
