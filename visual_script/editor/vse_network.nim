@@ -115,7 +115,7 @@ proc serialize*(v: VSNetworkView): string =
 
     #todo: Serialize view here
 
-proc deserialize*(v: VSNetworkView, data: string, creator: VSEHostCreator) =
+proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) =
     type NetworkDataState {.pure.} = enum
         name, dispatchers, hosts, links, flow, vsemeta, eof
 
@@ -190,7 +190,7 @@ proc deserialize*(v: VSNetworkView, data: string, creator: VSEHostCreator) =
             if not ih.isNil and not oh.isNil:
                 v.connect(ih.output[0], oh.input[0])
 
-    for line in data.splitLines():
+    for line in data:
         var line = line
         if line.len == 0:
             state.nextState

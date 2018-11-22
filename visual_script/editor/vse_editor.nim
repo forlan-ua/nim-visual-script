@@ -104,7 +104,9 @@ method init*(v: VSEditorView, r:Rect)=
             reloadCache()
             var data = readFile(path)
             if data.len > 0:
+                var data = data.splitLines()
                 var nv = new(VSNetworkView, v.networkRect)
+                nv.name = data[0]
                 v.currentNetwork = nv
                 v.addNetworkView(nv)
                 nv.deserialize(data, v.hostCreator())
