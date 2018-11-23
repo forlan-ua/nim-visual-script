@@ -175,13 +175,19 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
                     var op = o[1][1 .. ^1].parseInt() + 1
 
                     var oh = hosts.getOrDefault(oid)
-                    echo "link ", ip, " >> ", op, " line ", line, " hosts ", @[ih.info, oh.info]
+                    # echo "link ", ip, " >> ", op, " line ", line, " hosts ", @[ih.info, oh.info]
                     v.connect(ih.input[ip], oh.output[op])
 
     proc linkFlow(line:string)=
         var sline = line.split(">")
         if sline[1][0] in "+-": #if statement
-            discard
+            var iid = sline[0].parseInt()
+            var ih = hosts.getOrDefault(iid)
+            let ip = (sline[1][0] == '-').int
+            var oid = sline[1][1 .. ^1].parseInt()
+            var oh = hosts.getOrDefault(oid)
+            if not ih.isNil and not oh.isNil:
+                v.connect(ih.output[ip], oh.input[0])
         else:
             var iid = sline[0].parseInt()
             var oid = sline[1].parseInt()
@@ -233,7 +239,8 @@ method init*(v: VSNetworkView, r: Rect) =
     v.portsListner.onPortOverOut = proc(p: VSPortView) =
         v.onPortOverOut(p)
 
-    v.networkContent = newView(newRect(0.0, 0.0, r.width - 200.0, r.height))
+    v.networkContent = newView(newRect(0.0, 0.0, r.width, r.height))
+    v.networkContent.autoresizingMask = {afFlexibleWidth, afFlexibleHeight}
 
     var networkScroll = newScrollView(v.networkContent)
     v.addSubview(v.networkContent)

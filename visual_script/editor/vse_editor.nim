@@ -27,7 +27,7 @@ proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
         v.networks[nv.name] = nv
         v.networksSuperView.TabView.addTab(nv.name, nv)
 
-proc networkRect(v: VSEditorView):Rect = newRect(0.0, 0.0, v.bounds.width - 200.0, v.bounds.height - 20.0)
+proc networkRect(v: VSEditorView):Rect = v.bounds
 
 proc hostCreator(v: VSEditorView): VSEHostCreator=
     result = proc(info: HostInfo): VSHostView=
@@ -61,19 +61,23 @@ method init*(v: VSEditorView, r:Rect)=
     v.networks = initTable[string, VSNetworkView]()
 
     var networksView = new(TabView, newRect(200.0, 20.0, r.width - 200.0, r.height - 20.0))
+    networksView.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
     v.addSubview(networksView)
     v.networksSuperView = networksView
 
-    var emptyNetwork = new(VSNetworkView, v.networkRect)
+    var emptyNetwork = new(VSNetworkView, networksView.bounds)
     emptyNetwork.name = "Empty"
+    emptyNetwork.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
     v.addNetworkView(emptyNetwork)
     v.currentNetwork = emptyNetwork
 
     var sidePanel = createSidePanel(newRect(0.0, 20.0, 200.0, r.height - 20.0))
+    sidePanel.autoResizingMask = {afFlexibleHeight}
     sidePanel.onHostAdd = v.hostCreator()
     v.addSubview(sidePanel)
 
     var panel = createVSMenu(newRect(0.0, 0.0, r.width, 20.0))
+    panel.autoResizingMask = {afFlexibleWidth}
     v.addSubview(panel)
 
     panel.addMenuWithHandler("File/Load") do():
@@ -87,7 +91,8 @@ method init*(v: VSEditorView, r:Rect)=
             var data = readFile(path)
             if data.len > 0:
                 var data = data.splitLines()
-                var nv = new(VSNetworkView, v.networkRect)
+                var nv = new(VSNetworkView, networksView.bounds)
+                nv.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
                 nv.name = data[0]
                 v.currentNetwork = nv
                 v.addNetworkView(nv)

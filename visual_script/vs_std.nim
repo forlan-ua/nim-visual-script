@@ -50,6 +50,9 @@ method connect*(vs: IntLitVSHost; port: string; port2: Variant) =
     if port == "o0":
         vs.o0.connect(port2)
 
+method metadata*(vs: IntLitVSHost): VSHostMeta =
+    return ("IntLitVSHost", "IntLiteral", @[], @[("output", "int", "")])
+
 putHostToRegistry(IntLitVSHost, proc(): VSHost = newIntLitVSHost())
 
 
@@ -71,6 +74,9 @@ method getPort*(vs: FloatLitVSHost; name: string, clone: bool = false, cloneAs: 
 method connect*(vs: FloatLitVSHost; port: string; port2: Variant) =
     if port == "o0":
         vs.o0.connect(port2)
+
+method metadata*(vs: FloatLitVSHost): VSHostMeta =
+    return ("FloatLitVSHost", "FloatLiteral", @[], @[("output", "float", "")])
 
 putHostToRegistry(FloatLitVSHost, proc(): VSHost = newFloatLitVSHost())
 
@@ -94,6 +100,9 @@ method connect*(vs: BoolLitVSHost; port: string; port2: Variant) =
     if port == "o0":
         vs.o0.connect(port2)
 
+method metadata*(vs: BoolLitVSHost): VSHostMeta =
+    return ("BoolLitVSHost", "BoolLiteral", @[], @[("output", "bool", "")])
+
 putHostToRegistry(BoolLitVSHost, proc(): VSHost = newBoolLitVSHost())
 
 
@@ -115,6 +124,9 @@ method getPort*(vs: JsonLitVSHost; name: string, clone: bool = false, cloneAs: V
 method connect*(vs: JsonLitVSHost; port: string; port2: Variant) =
     if port == "o0":
         vs.o0.connect(port2)
+
+method metadata*(vs: JsonLitVSHost): VSHostMeta =
+    return ("JsonLitVSHost", "JsonLiteral", @[], @[("output", "JsonNode", "")])
 
 putHostToRegistry(JsonLitVSHost, proc(): VSHost = newJsonLitVSHost())
 
@@ -145,6 +157,9 @@ method getPort*(vs: IfVSHost; name: string, clone: bool = false, cloneAs: VSPort
 method connect*(vs: IfVSHost; port: string; port2: Variant) =
     if port == "i0":
         vs.i0.connect(port2)
+
+method metadata*(vs: IfVSHost): VSHostMeta =
+    return ("IfVSHost", "IfVSHost", @[("condition", "bool", "")], @[("true", "VSFlow", "")])
 
 putHostToRegistry(IfVSHost, proc(): VSHost = newIfVSHost())
 
