@@ -88,3 +88,6 @@ type
 
 proc canHandleDefaultValue*(v: VSPortView): bool =
     v.info.typ in ["bool", "int", "int8", "int16", "int32", "string", "char", "float"]
+
+# literal have flow input port
+proc isLitHost*(i: HostInfo): bool = i.inputPorts.len == 1

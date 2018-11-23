@@ -106,14 +106,37 @@ proc removeHostVies*(v: VSNetworkView, host: VSHostView)=
     echo "removing ", host.name
 
 proc serialize*(v: VSNetworkView): string =
-    result = "$1>$2\n\n" % [v.name, "DummyDispatcher"]
+    var templ = "$1\n\n$2\n$3\n$4\n$5\n$6\n"
+
+    var dispatchers = ""
+    var hosts = ""
+    var links = ""
+    var flows = ""
     for h in v.hosts:
-        let sh = h.serialize()
-        result &= sh & "\n\n"
+        var t = "$1 $2" % [$h.id, h.name]
+        if h.info.isDispatcher:
+            dispatchers &= t & "\n"
+        else:
+            hosts &= t & "\n"
 
-    #todo: Serialize flow here
+        if h.info.isLitHost:
+            for i, p in h.output:
+                if p.defaultValue.len > 0:
+                    var lit = "$1.o$2=$3" % [$h.id, $(i-1), p.defaultValue]
+                    links &= lit & "\n"
+        else:
+            for ip, p in h.input:
+                if p.info.typ == "VSFlow":
+                    for c in p.connections:
+                        var flow = "$1>$2" % [$c.host.id, $h.id]
+                        flows &= flow & "\n"
+                else:
+                    for c in p.connections:
+                        let op = c.host.output.find(c) - 1
+                        var link = "$1.i$2>$3.o$4" % [$h.id, $(ip-1), $c.host.id, $op]
+                        links &= link & "\n"
 
-    #todo: Serialize view here
+    result = templ % [v.name, dispatchers, hosts, links, flows, "meta"]
 
 proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) =
     type NetworkDataState {.pure.} = enum
@@ -167,7 +190,7 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
 
 
                 if sep == "=":
-                    discard
+                    ih.output[ip].defaultValue = sline[1]
                 else:
                     var o = sline[1].split(".")
                     var oid = o[0].parseInt()

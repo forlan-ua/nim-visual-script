@@ -61,6 +61,7 @@ proc createPortView*(info: PortInfo, p: var Point, s: Size, orientation: bool): 
     result.orientation = orientation
     result.pinColor = pinDefaultColor
     result.info = info
+    result.defaultValue = info.value
 
     result.trackMouseOver(true)
 
@@ -77,5 +78,3 @@ proc createPortView*(info: PortInfo, p: var Point, s: Size, orientation: bool): 
     lb.textColor = colorForType(info.typ)
 
     p.y = p.y + portStep
-
-
