@@ -130,7 +130,7 @@ proc newIfVSHost*(): IfVSHost =
     result.falseFlow = @[]
     result.i0 = newVSPort("condition", bool, VSPortKind.Input)
 
-method invokeFlow*(host: IfVSHost) = 
+method invokeFlow*(host: IfVSHost) =
     if host.i0.read():
         for h in host.flow:
             h.invokeFlow()
@@ -167,7 +167,7 @@ method invokeFlow*(vs: IfElifVSHost) =
             for h in vs.trueFlow[i]:
                 h.invokeFlow()
                 return
-    
+
     for h in vs.falseFlow:
         h.invokeFlow()
 
@@ -207,6 +207,7 @@ method invokeFlow*(host: WhileVSHost) =
 
 putHostToRegistry(WhileVSHost, proc(): VSHost = newWhileVSHost())
 
+proc iadd(i1, i2: int): int {.vshost.} = i1 + i2
 
 proc eqString*(str1, str2: string): bool {.vshost.} =
     result = str1 == str2

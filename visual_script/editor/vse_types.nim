@@ -32,6 +32,7 @@ type HostInfo* = tuple
     name: string
     inputPorts: seq[PortInfo]
     outputPorts: seq[PortInfo]
+    isDispatcher: bool
 
 type
     PortViewScrollListner* = ref object of OnScrollListener
@@ -44,7 +45,7 @@ type
         pinColor*: Color
         info*: PortInfo
         listner*: VSPortListner
-        pinPosition*: Point 
+        pinPosition*: Point
         host*: VSHostView
         defaultValue*: string
 
@@ -79,5 +80,11 @@ type
         currentNetwork*: VSNetworkView
         networksSuperView*: View
 
-proc canHandleDefaultValue*(v: VSPortView): bool = 
+    VSETfPopup* = ref object of PanelView
+        onText*: proc(str: string)
+    VSEFindPopup* = ref object of VSETfPopup
+
+    VSEHostCreator* = proc(info: HostInfo): VSHostView
+
+proc canHandleDefaultValue*(v: VSPortView): bool =
     v.info.typ in ["bool", "int", "int8", "int16", "int32", "string", "char", "float"]

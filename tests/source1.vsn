@@ -1,0 +1,31 @@
+MyNetwork1
+
+10 TestDispatcher1
+11 TestDispatcher2
+
+0 GetRootNodeVSHost
+5 EqStringVSHost
+6 StringLitVSHost
+1 FindNodeVSHost
+2 GetComponentVSHost
+3 SetTextVSHost
+4 AddChildVSHost
+8 IfVSHost
+
+1.i1>10.o0
+1.i0>0.o0
+2.i0>1.o0
+3.i0>2.o0
+3.i1>10.o1
+4.i0>1.o0
+4.i1>10.o2
+5.i0>10.o0
+5.i1>6.o0
+8.i0>5.o0
+6.o0=test1
+
+10>1
+1>8
+8>+2
+8>-4
+2>3

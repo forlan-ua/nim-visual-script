@@ -10,20 +10,17 @@ import os_files.dialog
 import visual_script.vs_host
 import visual_script.vs_std
 
-import vse_side_panel
 import vse_types
 export vse_types
+
+import vse_side_panel
 import vse_colors
 import vse_host
 import vse_port
 import vse_menu_panel
 import vse_network
-
-proc newNetworkView(r: Rect, data:string = nil): VSNetworkView=
-    result.new()
-    result.init(r)
-    if not data.isNil:
-        result.deserialize(data)
+import vse_metadata_cache
+import vse_popup
 
 proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
     if nv.name notin v.networks:
@@ -32,24 +29,11 @@ proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
 
 proc networkRect(v: VSEditorView):Rect = newRect(0.0, 0.0, v.bounds.width - 200.0, v.bounds.height - 20.0)
 
-method init*(v: VSEditorView, r:Rect)=
-    procCall v.View.init(r)
-    v.backgroundColor = whiteColor()
-    v.networks = initTable[string, VSNetworkView]()
-
-    var networksView = new(TabView, newRect(200.0, 20.0, r.width - 200.0, r.height - 20.0))
-    v.addSubview(networksView)
-    v.networksSuperView = networksView
-
-    var emptyNetwork = newNetworkView(v.networkRect)
-    emptyNetwork.name = "Empty"
-    v.addNetworkView(emptyNetwork)
-    v.currentNetwork = emptyNetwork
-
-    var sidePanel = createSidePanel(newRect(0.0, 20.0, 200.0, r.height - 20.0))
-    v.addSubview(sidePanel)
-    sidePanel.onHostAdd = proc(info: HostInfo)=
+proc hostCreator(v: VSEditorView): VSEHostCreator=
+    result = proc(info: HostInfo): VSHostView=
         let cn = v.currentNetwork
+
+        echo "creator called ", info
 
         var hostV = createHostView(info, cn.portsListner)
         hostV.setFrameOrigin(newPoint(400,400))
@@ -63,25 +47,31 @@ method init*(v: VSEditorView, r:Rect)=
             echo "try remove hostV ", hostV.name
 
         hostV.addSubview(remHostBtn)
-        
+
         hostV.id = cn.currHostID
         inc cn.currHostID
 
         cn.networkContent.addSubview(hostV)
         cn.hosts.add(hostV)
+        result = hostV
 
-    # var registryView = newView(newRect(0,20, 200, r.height))
-    # registryView.backgroundColor = newColor(0.7, 0.7, 0.7, 1.0)
-    # var y = 0.0
+method init*(v: VSEditorView, r:Rect)=
+    procCall v.View.init(r)
+    v.backgroundColor = whiteColor()
+    v.networks = initTable[string, VSNetworkView]()
 
-    # for host in walkHostRegistry():
-    #     echo "host ", host.name , " metadata ", host.metadata
-    #     let rv = createRegisteredHostView(newRect(0, y, 200.0, 60.0), host.metadata.typeName, v.currentNetwork.onAddHostView(host))
-    #     registryView.addSubview(rv)
-    #     y += 65.0
+    var networksView = new(TabView, newRect(200.0, 20.0, r.width - 200.0, r.height - 20.0))
+    v.addSubview(networksView)
+    v.networksSuperView = networksView
 
-    # var scroll = newScrollView(registryView)
-    # v.addSubview(scroll)
+    var emptyNetwork = new(VSNetworkView, v.networkRect)
+    emptyNetwork.name = "Empty"
+    v.addNetworkView(emptyNetwork)
+    v.currentNetwork = emptyNetwork
+
+    var sidePanel = createSidePanel(newRect(0.0, 20.0, 200.0, r.height - 20.0))
+    sidePanel.onHostAdd = v.hostCreator()
+    v.addSubview(sidePanel)
 
     var panel = createVSMenu(newRect(0.0, 0.0, r.width, 20.0))
     v.addSubview(panel)
@@ -93,11 +83,17 @@ method init*(v: VSEditorView, r:Rect)=
         di.filters = @[(name: "VSNetwork", ext: "*.vsn")]
         let path = di.show()
         if path.len > 0:
+            reloadCache()
             var data = readFile(path)
-            var nv = newNetworkView(v.networkRect, data)
-            v.addNetworkView(nv)
-            echo "load network ", data
-    
+            if data.len > 0:
+                var data = data.splitLines()
+                var nv = new(VSNetworkView, v.networkRect)
+                nv.name = data[0]
+                v.currentNetwork = nv
+                v.addNetworkView(nv)
+                nv.deserialize(data, v.hostCreator())
+
+
     panel.addMenuWithHandler("File/Save") do():
         var di: DialogInfo
         di.kind = dkSaveFile
@@ -109,13 +105,22 @@ method init*(v: VSEditorView, r:Rect)=
             writeFile(path, v.currentNetwork.serialize)
             echo "save to ", path
 
+    panel.addMenuWithHandler("Edit/Reload Cache") do():
+        reloadCache()
+        sidePanel.onChanged()
+
+    panel.addMenuWithHandler("Edit/Rename Network") do():
+        let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
+        if ti >= 0:
+            v.newTfPopup(continuous = false) do(str: string):
+                v.currentNetwork.name = str
+                v.networksSuperView.TabView.setTitleOfTab(str, ti)
+
     panel.addMenuWithHandler("View/Registry") do():
         echo "toggle registry"
-    
+
     panel.addMenuWithHandler("View/Some/Test") do():
         echo "sas"
 
     panel.addMenuWithHandler("About/WTF") do():
         echo "wtf"
-
-
