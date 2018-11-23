@@ -6,7 +6,7 @@ type Node = ref object of RootObj
 proc findNode(parent: Node, nodeName: string): Node {.vsHost.} = echo "findNode: ", nodeName
 proc getRootNode(): Node {.vsHost.} = echo "getRootNode"
 type Component = ref object of RootObj
-proc getComponent(node: Node): Component {.vsHost.} = echo "getComponent" 
+proc getComponent(node: Node): Component {.vsHost.} = echo "getComponent"
 proc setText(component: Component, text: string) {.vsHost.} = echo "setText: ", text
 proc addChild(parent: Node, child: Node) {.vsHost.} = echo "addChild"
 
@@ -88,11 +88,13 @@ generateNetwork(source1)
 
 registerNetworkDispatcher("TestDispatcher1", {nodeName: string, text: string, child: Node})
 
-echo " "
+# echo " "
 dispatchNetwork("TestDispatcher1", "test1", "test2", n)
-echo " "
+# echo " "
 dispatchNetwork("TestDispatcher1", "test3", "test4", n)
 
-echo " "
+# dispatchNetwork_TestDispatcher1("test1", "test3", n)
+
+# echo " "
 for d in eachDispatcher():
     echo d.ports

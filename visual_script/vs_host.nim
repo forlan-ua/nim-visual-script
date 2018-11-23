@@ -29,7 +29,7 @@ proc connect*[T](p1, p2: VSPort[T]) =
     let ind1 = p2.connections.find(p1)
     if ind1 == -1:
         p2.connections.add(p1)
-    
+
     let ind2 = p1.connections.find(p2)
     if ind2 == -1:
         p1.connections.add(p2)
@@ -43,11 +43,11 @@ proc disconnect*[T](p1, p2: VSPort[T]) =
     let ind1 = p2.connections.find(p1)
     if ind1 > -1:
         p2.connections.del(ind1)
-    
+
     let ind2 = p1.connections.find(p2)
     if ind2 > -1:
         p1.connections.del(ind2)
-    
+
     if p1.kind == VSPortKind.Input:
         assert(p2.kind == VSPortKind.Output)
         if p1.source == p2:
@@ -104,7 +104,7 @@ proc readOutput*[T](vs: VSPort[T]): T =
 
 proc rawData*[T](vs: VSPort[T]): T =
     assert(vs.kind == VSPortKind.Output)
-    vs.data 
+    vs.data
 
 proc newVSPort*(name: string, T: typedesc, kind: VSPortKind): VSPort[T] =
     result = new(VSPort[T])
@@ -224,7 +224,7 @@ proc generateTypeWithFields(a: NimNode, originalProcName: string, typeName: NimN
         for i in 0 ..< recList.len:
             if recList[i][0] == arg:
                 return true
-    
+
     for i, output in outputs:
         recList.add(createPortNode(ident("o" & $i), output.sign))
 
@@ -259,11 +259,11 @@ proc generateOriginalFunctionCall(a: NimNode, inputs: seq[InputPortNode]): NimNo
 
 proc generateInvokeMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
     let originalCall = generateOriginalFunctionCall(a, inputs)
-    
+
     let invoke = newProc(
-        nnkPostfix.newTree(ident("*"), ident("invoke")), 
-        [newEmptyNode(), nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode())], 
-        nnkStmtList.newTree(), 
+        nnkPostfix.newTree(ident("*"), ident("invoke")),
+        [newEmptyNode(), nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode())],
+        nnkStmtList.newTree(),
         nnkMethodDef
     )
 
@@ -329,7 +329,7 @@ proc generateMetaDataProc(a: NimNode, originalProcName: string, typeName: NimNod
 
 proc generateCreatorProc(a: NimNode, originalProcName: string, creatorProcName: NimNode, typeName: NimNode, outputs: seq[OutputPortNode], inputs: seq[InputPortNode]): NimNode =
     let creator = newProc(
-        nnkPostfix.newTree(ident("*"), creatorProcName), 
+        nnkPostfix.newTree(ident("*"), creatorProcName),
         [typeName],
         nnkStmtList.newTree(
             nnkLetSection.newTree(
@@ -410,7 +410,7 @@ proc generateCreatorProc(a: NimNode, originalProcName: string, creatorProcName: 
                         nnkStmtList.newTree(
                             newIfStmt(
                                 (
-                                    nnkCall.newTree(ident("not"), 
+                                    nnkCall.newTree(ident("not"),
                                     nnkDotExpr.newTree(ident("vs"), ident("frozen"))), nnkCall.newTree(nnkDotExpr.newTree(ident("vs"), ident("invoke")))
                                 )
                             ),
@@ -480,10 +480,10 @@ proc generateGetPortMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
     let getPort = newProc(
         nnkPostfix.newTree(ident("*"), ident("getPort")),
         [
-            ident("Variant"), 
-            nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()), 
-            nnkIdentDefs.newTree(ident("name"), ident("string"), newEmptyNode()), 
-            nnkIdentDefs.newTree(ident("clone"), ident("bool"), ident("false")), 
+            ident("Variant"),
+            nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()),
+            nnkIdentDefs.newTree(ident("name"), ident("string"), newEmptyNode()),
+            nnkIdentDefs.newTree(ident("clone"), ident("bool"), ident("false")),
             nnkIdentDefs.newTree(ident("cloneAs"), ident("VSPortKind"), nnkDotExpr.newTree(ident("VSPortKind"), ident("Output")))
         ],
         nnkStmtList.newTree(nnkIfStmt.newTree()),
@@ -579,8 +579,8 @@ proc generateConnectMethod(a: NimNode, typeName: NimNode, outputs: seq[OutputPor
     let connect = newProc(
         nnkPostfix.newTree(ident("*"), ident("connect")),
         [
-            newEmptyNode(), 
-            nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()), 
+            newEmptyNode(),
+            nnkIdentDefs.newTree(ident("vs"), typeName, newEmptyNode()),
             nnkIdentDefs.newTree(ident("port"), ident("string"), newEmptyNode()),
             nnkIdentDefs.newTree(ident("port2"), ident("Variant"), newEmptyNode())
         ],
@@ -649,7 +649,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 
     let outputs = generateOutputs(a)
     let inputs = generateInputs(a)
-    
+
     var originalProcName = originalProcName
     if compileTimeRegistry.hasKey(originalProcName):
         for input in inputs:
@@ -659,7 +659,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
                 originalProcName &= sign[0 ..< index].capitalizeAscii()
             else:
                 originalProcName &= sign.capitalizeAscii()
-                
+
     result = nnkStmtList.newTree(a)
 
     let typeName = ident(originalProcName.capitalizeAscii() & "VSHost")
@@ -672,7 +672,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 
     let metadataProc = generateMetaDataProc(a, originalProcName, typeName, outputs, inputs)
     result.add(metadataProc)
-    
+
     let creatorProcName = ident("new" & $typeName)
     let creatorProc = generateCreatorProc(a, originalProcName, creatorProcName, typeName, outputs, inputs)
     result.add(creatorProc)
@@ -682,7 +682,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 
     let connectMethod = generateConnectMethod(a, typeName, outputs, inputs)
     result.add(connectMethod)
-    
+
     let destroyMethod = generateDestroyMethod(a, typeName, outputs, inputs)
     result.add(destroyMethod)
 
@@ -692,7 +692,7 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
             newLit($typeName),
             newProc(
                 newEmptyNode(),
-                [ident("VSHost")], 
+                [ident("VSHost")],
                 nnkStmtList.newTree(
                     nnkCall.newTree(
                         ident("VSHost"),
@@ -700,19 +700,20 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
                             creatorProcName
                         )
                     )
-                ), 
+                ),
                 nnkLambda
             )
         )
     )
-    
+
     compileTimeRegistry[originalProcName] = result
 
-    echo repr(result)
+    # echo repr(result)
 
 
-macro vshost*(name: untyped, a: untyped = nil): typed =
-    if not a.isNil:
-        toVsHost($name, a)
+macro vshost*(procDef: untyped, a: untyped = nil): typed =
+    # echo treeRepr(procDef), " \na ", if not a.isNil: treeRepr(a) else: "nil"
+    if not a.isNil and a.kind != nnkNilLit:
+        toVsHost($a, procDef)
     else:
-        toVsHost(name[0].getName(), name)
+        toVsHost(procDef[0].getName(), procDef)

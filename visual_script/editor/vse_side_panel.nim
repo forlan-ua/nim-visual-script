@@ -11,45 +11,15 @@ import visual_script.vs_network
 import visual_script.vs_std
 
 import vse_types
+import vse_metadata_cache
 
 type VSSidePanelView* = ref object of View
-    onHostAdd*: proc(meta: HostInfo)
-    onChanged: proc()
-    hostMetaCache: seq[VSHostMeta]
-    dispatcherCache: seq[DispatcherMeta]
+    onHostAdd*: VSEHostCreator
+    onChanged*: proc()
+    # hostMetaCache: seq[VSHostMeta]
+    # dispatcherCache: seq[DispatcherMeta]
     filter: TextField
     content: View
-
-proc metaToInfo(meta: VSHostMeta): HostInfo=
-    var info: HostInfo
-    info.name = meta.typeName
-    info.inputPorts = @[]
-    info.inputPorts.add((name:"Input", typ:VSFLOWTYPE, value:"", active: false))
-    if not meta.inputs.isNil:
-        for i in meta.inputs:
-            info.inputPorts.add((name: i.name, typ: i.sign, value: i.default, active: false))
-    
-    info.outputPorts = @[]
-    info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if not meta.outputs.isNil:
-        for i in meta.outputs:
-            info.outputPorts.add((name: i.name, typ: i.sign, value: i.default, active: true))
-    
-    result = info
-
-proc metaToInfo(meta: DispatcherMeta): HostInfo=
-    var info: HostInfo
-    info.name = meta.name
-    info.inputPorts = @[]
-
-    info.outputPorts = @[]
-    info.outputPorts.add((name:"Output", typ:VSFLOWTYPE, value:"", active: true))
-    if not meta.ports.isNil:
-        for i in meta.ports:
-            info.outputPorts.add((name: i.name, typ: i.sign, value: "", active: true))
-        
-    result = info
-    echo "MetaToInfo dispatcher ", meta, " info ", info
 
 proc createRegisteredHostView(r: Rect, name: string, cb: proc()): View =
     result = newView(r)
@@ -57,16 +27,17 @@ proc createRegisteredHostView(r: Rect, name: string, cb: proc()): View =
     var btn = newButton(newRect(0, 25.0, 40.0, 20.0))
     btn.title = "Add"
     btn.onAction do():
+        echo "cb1 ", name
         cb()
     result.addSubview(btn)
     result.backgroundColor = newColor(0.5,0.5,0.5, 0.96)
 
-proc onItemClick[T](v: VSSidePanelView, meta: T): proc()=
-    let meta = meta
-    let info = meta.metaToInfo()
+proc onItemClick[T](v: VSSidePanelView, info: T): proc()=
     result = proc()=
+        echo "cb 2 ", info.name
         if not v.onHostAdd.isNil:
-            v.onHostAdd(info)
+            echo "cb 3 ", info.name
+            discard v.onHostAdd(info)
 
 proc clearContent(v: VSSidePanelView)=
     while v.content.subviews.len > 0:
@@ -74,34 +45,22 @@ proc clearContent(v: VSSidePanelView)=
 
 proc loadHosts(v: VSSidePanelView)=
     v.clearContent()
-    v.hostMetaCache.sort do(a,b:VSHostMeta) -> int:
-        result = cmp(a.typeName, b.typeName)
-    for i, meta in v.hostMetaCache:
-        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in meta.typeName.toLowerAscii):
-            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), meta.typeName, v.onItemClick(meta))
+    for info in vsHostsInMeta():
+        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in info.name.toLowerAscii):
+            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), info.name, v.onItemClick(info))
             v.content.addSubview(h)
     v.setNeedsDisplay()
 
 proc loadDispatchers(v: VSSidePanelView)=
     v.clearContent()
-    v.dispatcherCache.sort do(a,b: DispatcherMeta) -> int:
-        result = cmp(a.name, b.name)
-    for i, meta in v.dispatcherCache:
-        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in meta.name.toLowerAscii):
-            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), meta.name, v.onItemClick(meta))
+    for info in vsDispatchersInMeta():
+        if v.filter.text.len == 0 or (v.filter.text.toLowerAscii in info.name):
+            var h = createRegisteredHostView(newRect(0, 0, v.frame.width, 60), info.name, v.onItemClick(info))
             v.content.addSubview(h)
 
 proc createSidePanel*(r: Rect): VSSidePanelView=
     let v = new(VSSidePanelView, r)
 
-    v.hostMetaCache = @[]
-    for host in walkHostRegistry():
-        v.hostMetaCache.add(host.metadata)
-    
-    v.dispatcherCache = @[]
-    for disp in eachDispatcher():
-        v.dispatcherCache.add(disp.metadata)
-    
     let sc = SegmentedControl.new(newRect(0, 0, r.width, 22))
     sc.segments = @["Hosts", "Dispatchers"]
     sc.autoresizingMask = { afFlexibleWidth, afFlexibleMaxY }
@@ -126,9 +85,9 @@ proc createSidePanel*(r: Rect): VSSidePanelView=
     var scroll = newScrollView(newRect(0, 50, r.width, r.height - 50))
     scroll.contentView = newStackView(zeroRect)
     v.addSubview(scroll)
-    
+
     v.content = scroll.contentView
-    
-    v.loadHosts()
+
+    v.onChanged()
 
     result = v
