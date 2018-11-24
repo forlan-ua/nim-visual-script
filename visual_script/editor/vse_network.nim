@@ -106,13 +106,18 @@ proc removeHostVies*(v: VSNetworkView, host: VSHostView)=
     echo "removing ", host.name
 
 proc serialize*(v: VSNetworkView): string =
-    var templ = "$1\n\n$2\n$3\n$4\n$5\n$6\n"
+    var
+        templ = "$1\n\n$2\n$3\n$4\n$5\n$6\n"
+        dispatchers = ""
+        hosts = ""
+        links = ""
+        flows = ""
+        meta = ""
 
-    var dispatchers = ""
-    var hosts = ""
-    var links = ""
-    var flows = ""
     for h in v.hosts:
+        var m = "$1 $2 $3" % [$h.id, $h.frame.x, $h.frame.y]
+        meta &= m & "\n"
+
         var t = "$1 $2" % [$h.id, h.name]
         if h.info.isDispatcher:
             dispatchers &= t & "\n"
@@ -124,19 +129,32 @@ proc serialize*(v: VSNetworkView): string =
                 if p.defaultValue.len > 0:
                     var lit = "$1.o$2=$3" % [$h.id, $(i-1), p.defaultValue]
                     links &= lit & "\n"
-        else:
-            for ip, p in h.input:
-                if p.info.typ == "VSFlow":
-                    for c in p.connections:
-                        var flow = "$1>$2" % [$c.host.id, $h.id]
-                        flows &= flow & "\n"
-                else:
-                    for c in p.connections:
-                        let op = c.host.output.find(c) - 1
-                        var link = "$1.i$2>$3.o$4" % [$h.id, $(ip-1), $c.host.id, $op]
-                        links &= link & "\n"
 
-    result = templ % [v.name, dispatchers, hosts, links, flows, "meta"]
+        # LINKS
+        for ip, p in h.input:
+            if p.info.typ != "VSFlow":
+                for c in p.connections:
+                    let op = c.host.output.find(c) - 1
+                    var link = "$1.i$2>$3.o$4" % [$h.id, $(ip-1), $c.host.id, $op]
+                    links &= link & "\n"
+
+        # FLOW
+        let isFlowHost = h.info.isFlowHost
+        for op, p in h.output:
+            if p.info.typ == "VSFlow":
+                for c in p.connections:
+                    if isFlowHost:
+                        var sig = "+"
+                        if p.name == "false":
+                            sig = "-"
+                        # for c in p.connections:
+                        var flow = "$1>$2$3" % [$h.id, sig, $c.host.id]
+                        flows &= flow & "\n"
+                    else:
+                        var flow = "$1>$2" % [$h.id, $c.host.id]
+                        flows &= flow & "\n"
+
+    result = templ % [v.name, dispatchers, hosts, links, flows, meta]
 
 proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) =
     type NetworkDataState {.pure.} = enum
@@ -219,6 +237,15 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
             if not ih.isNil and not oh.isNil:
                 v.connect(ih.output[0], oh.input[0])
 
+    proc readMeta(line: string)=
+        var sline = line.split(" ")
+        let id = sline[0].parseInt()
+        let x = sline[1].parseFloat()
+        let y = sline[2].parseFloat()
+        let h = hosts.getOrDefault(id)
+        if not h.isNil:
+            h.setFrameOrigin(newPoint(x, y))
+
     for line in data:
         var line = line
         if line.len == 0:
@@ -235,7 +262,7 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
         of NetworkDataState.flow:
             linkFlow(line)
         of NetworkDataState.vsemeta:
-            echo "vse meta: ", line
+            readMeta(line)
         else:
             echo "EOF VSN"
             break

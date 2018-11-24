@@ -23,6 +23,7 @@ import vse_metadata_cache
 import vse_popup
 
 proc addNetworkView(v: VSEditorView, nv: VSNetworkView)=
+    # var old = v.networks.getOrDefault(nv.name)
     if nv.name notin v.networks:
         v.networks[nv.name] = nv
         v.networksSuperView.TabView.addTab(nv.name, nv)
@@ -54,6 +55,11 @@ proc hostCreator(v: VSEditorView): VSEHostCreator=
         cn.networkContent.addSubview(hostV)
         cn.hosts.add(hostV)
         result = hostV
+
+proc selectCurrentTab(v: VSEditorView)=
+    let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork)
+    if ti >= 0:
+        v.networksSuperView.TabView.selectTab(ti)
 
 method init*(v: VSEditorView, r:Rect)=
     procCall v.View.init(r)
@@ -97,7 +103,7 @@ method init*(v: VSEditorView, r:Rect)=
                 v.currentNetwork = nv
                 v.addNetworkView(nv)
                 nv.deserialize(data, v.hostCreator())
-
+                v.selectCurrentTab()
 
     panel.addMenuWithHandler("File/Save") do():
         var di: DialogInfo
@@ -110,16 +116,43 @@ method init*(v: VSEditorView, r:Rect)=
             writeFile(path, v.currentNetwork.serialize)
             echo "save to ", path
 
-    panel.addMenuWithHandler("Edit/Reload Cache") do():
+    panel.addMenuWithHandler("Network/New") do():
+        var emptyNetwork = new(VSNetworkView, networksView.bounds)
+        emptyNetwork.name = "Empty"
+        emptyNetwork.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
+        v.currentNetwork = emptyNetwork
+        v.addNetworkView(emptyNetwork)
+        v.selectCurrentTab()
+
+    panel.addMenuWithHandler("Network/Reload Cache") do():
         reloadCache()
         sidePanel.onChanged()
 
-    panel.addMenuWithHandler("Edit/Rename Network") do():
+    panel.addMenuWithHandler("Network/Rename") do():
         let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
         if ti >= 0:
+            let oldName = v.currentNetwork.name
             v.newTfPopup(continuous = false) do(str: string):
                 v.currentNetwork.name = str
                 v.networksSuperView.TabView.setTitleOfTab(str, ti)
+                v.networks[oldName] = nil
+                v.networks[str] = v.currentNetwork
+
+    panel.addMenuWithHandler("Network/Close") do():
+        var tc = v.networksSuperView.TabView.tabIndex(v.currentNetwork)
+        if tc > 0:
+            v.networksSuperView.TabView.removeTab(tc)
+            v.currentNetwork = v.networksSuperView.TabView.selectedView().VSNetworkView
+
+    panel.addMenuWithHandler("Network/Copy") do():
+        var data = v.currentNetwork.serialize().splitLines()
+        var nv = new(VSNetworkView, networksView.bounds)
+        nv.autoResizingMask = {afFlexibleWidth, afFlexibleHeight}
+        nv.name = data[0] & "_copy"
+        v.currentNetwork = nv
+        v.addNetworkView(nv)
+        nv.deserialize(data, v.hostCreator())
+        v.selectCurrentTab()
 
     panel.addMenuWithHandler("View/Registry") do():
         echo "toggle registry"

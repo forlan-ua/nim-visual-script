@@ -159,7 +159,7 @@ method connect*(vs: IfVSHost; port: string; port2: Variant) =
         vs.i0.connect(port2)
 
 method metadata*(vs: IfVSHost): VSHostMeta =
-    return ("IfVSHost", "IfVSHost", @[("condition", "bool", "")], @[("true", "VSFlow", "")])
+    return ("IfVSHost", "IfVSHost", @[("condition", "bool", "")], @[("false", "VSFlow", "")])
 
 putHostToRegistry(IfVSHost, proc(): VSHost = newIfVSHost())
 
