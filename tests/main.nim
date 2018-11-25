@@ -3,8 +3,7 @@ import visual_script / vs_editor
 import visual_script_tests
 
 proc startApplication() =
-    let mainWindow = newWindow(newRect(40, 40, 1280, 720))
-
+    let mainWindow = newWindow(newRect(140, 140, 1280, 720))
     mainWindow.title = "VSE: Visual Script Editor"
 
     var editor = new(VSEditorView)

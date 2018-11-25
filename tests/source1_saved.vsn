@@ -1,0 +1,40 @@
+example
+
+0 TestDispatcher1
+
+1 GetRootNodeVSHost
+2 EqStringVSHost
+3 StringLitVSHost
+4 FindNodeVSHost
+5 GetComponentVSHost
+6 SetTextVSHost
+7 AddChildVSHost
+8 IfVSHost
+
+2.i0>0.o0
+2.i1>3.o0
+3.o0=test1
+4.i0>1.o0
+4.i1>0.o0
+5.i0>4.o0
+6.i0>5.o0
+6.i1>0.o1
+7.i0>4.o0
+7.i1>0.o2
+8.i0>2.o0
+
+0>4
+4>8
+5>6
+8>+5
+
+0 74.0 155.0
+1 424.0 419.0
+2 40.0 446.0
+3 178.0 347.0
+4 715.0 475.0
+5 384.0 225.0
+6 685.0 253.0
+7 523.0 83.0
+8 371.0 536.0
+

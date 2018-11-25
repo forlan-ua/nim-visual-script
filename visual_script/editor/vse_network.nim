@@ -106,14 +106,55 @@ proc removeHostVies*(v: VSNetworkView, host: VSHostView)=
     echo "removing ", host.name
 
 proc serialize*(v: VSNetworkView): string =
-    result = "$1>$2\n\n" % [v.name, "DummyDispatcher"]
+    var
+        templ = "$1\n\n$2\n$3\n$4\n$5\n$6\n"
+        dispatchers = ""
+        hosts = ""
+        links = ""
+        flows = ""
+        meta = ""
+
     for h in v.hosts:
-        let sh = h.serialize()
-        result &= sh & "\n\n"
+        var m = "$1 $2 $3" % [$h.id, $h.frame.x, $h.frame.y]
+        meta &= m & "\n"
 
-    #todo: Serialize flow here
+        var t = "$1 $2" % [$h.id, h.name]
+        if h.info.isDispatcher:
+            dispatchers &= t & "\n"
+        else:
+            hosts &= t & "\n"
 
-    #todo: Serialize view here
+        if h.info.isLitHost:
+            for i, p in h.output:
+                if p.defaultValue.len > 0:
+                    var lit = "$1.o$2=$3" % [$h.id, $(i-1), p.defaultValue]
+                    links &= lit & "\n"
+
+        # LINKS
+        for ip, p in h.input:
+            if p.info.typ != "VSFlow":
+                for c in p.connections:
+                    let op = c.host.output.find(c) - 1
+                    var link = "$1.i$2>$3.o$4" % [$h.id, $(ip-1), $c.host.id, $op]
+                    links &= link & "\n"
+
+        # FLOW
+        let isFlowHost = h.info.isFlowHost
+        for op, p in h.output:
+            if p.info.typ == "VSFlow":
+                for c in p.connections:
+                    if isFlowHost:
+                        var sig = "+"
+                        if p.name == "false":
+                            sig = "-"
+                        # for c in p.connections:
+                        var flow = "$1>$2$3" % [$h.id, sig, $c.host.id]
+                        flows &= flow & "\n"
+                    else:
+                        var flow = "$1>$2" % [$h.id, $c.host.id]
+                        flows &= flow & "\n"
+
+    result = templ % [v.name, dispatchers, hosts, links, flows, meta]
 
 proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) =
     type NetworkDataState {.pure.} = enum
@@ -167,7 +208,7 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
 
 
                 if sep == "=":
-                    discard
+                    ih.output[ip].defaultValue = sline[1]
                 else:
                     var o = sline[1].split(".")
                     var oid = o[0].parseInt()
@@ -175,13 +216,19 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
                     var op = o[1][1 .. ^1].parseInt() + 1
 
                     var oh = hosts.getOrDefault(oid)
-                    echo "link ", ip, " >> ", op, " line ", line, " hosts ", @[ih.info, oh.info]
+                    # echo "link ", ip, " >> ", op, " line ", line, " hosts ", @[ih.info, oh.info]
                     v.connect(ih.input[ip], oh.output[op])
 
     proc linkFlow(line:string)=
         var sline = line.split(">")
         if sline[1][0] in "+-": #if statement
-            discard
+            var iid = sline[0].parseInt()
+            var ih = hosts.getOrDefault(iid)
+            let ip = (sline[1][0] == '-').int
+            var oid = sline[1][1 .. ^1].parseInt()
+            var oh = hosts.getOrDefault(oid)
+            if not ih.isNil and not oh.isNil:
+                v.connect(ih.output[ip], oh.input[0])
         else:
             var iid = sline[0].parseInt()
             var oid = sline[1].parseInt()
@@ -189,6 +236,15 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
             var oh = hosts.getOrDefault(oid)
             if not ih.isNil and not oh.isNil:
                 v.connect(ih.output[0], oh.input[0])
+
+    proc readMeta(line: string)=
+        var sline = line.split(" ")
+        let id = sline[0].parseInt()
+        let x = sline[1].parseFloat()
+        let y = sline[2].parseFloat()
+        let h = hosts.getOrDefault(id)
+        if not h.isNil:
+            h.setFrameOrigin(newPoint(x, y))
 
     for line in data:
         var line = line
@@ -206,7 +262,7 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
         of NetworkDataState.flow:
             linkFlow(line)
         of NetworkDataState.vsemeta:
-            echo "vse meta: ", line
+            readMeta(line)
         else:
             echo "EOF VSN"
             break
@@ -233,7 +289,8 @@ method init*(v: VSNetworkView, r: Rect) =
     v.portsListner.onPortOverOut = proc(p: VSPortView) =
         v.onPortOverOut(p)
 
-    v.networkContent = newView(newRect(0.0, 0.0, r.width - 200.0, r.height))
+    v.networkContent = newView(newRect(0.0, 0.0, r.width, r.height))
+    v.networkContent.autoresizingMask = {afFlexibleWidth, afFlexibleHeight}
 
     var networkScroll = newScrollView(v.networkContent)
     v.addSubview(v.networkContent)

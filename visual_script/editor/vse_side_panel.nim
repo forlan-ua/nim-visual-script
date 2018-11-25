@@ -60,6 +60,7 @@ proc loadDispatchers(v: VSSidePanelView)=
 
 proc createSidePanel*(r: Rect): VSSidePanelView=
     let v = new(VSSidePanelView, r)
+    v.autoresizingMask = { afFlexibleMaxX, afFlexibleHeight }
 
     let sc = SegmentedControl.new(newRect(0, 0, r.width, 22))
     sc.segments = @["Hosts", "Dispatchers"]
@@ -83,7 +84,9 @@ proc createSidePanel*(r: Rect): VSSidePanelView=
             v.loadDispatchers()
 
     var scroll = newScrollView(newRect(0, 50, r.width, r.height - 50))
+    scroll.autoresizingMask = { afFlexibleMaxX, afFlexibleHeight }
     scroll.contentView = newStackView(zeroRect)
+    scroll.contentView.autoresizingMask = { afFlexibleMaxX, afFlexibleHeight }
     v.addSubview(scroll)
 
     v.content = scroll.contentView

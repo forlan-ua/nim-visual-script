@@ -3,7 +3,7 @@ import nimx / [
     types, view, button, text_field, panel_view, context, event,
     view_dragging_listener, font, formatted_text, gesture_detector
 ]
-
+import sequtils
 
 var defaultFont*: Font = systemFontOfSize(16.0)
 
@@ -88,3 +88,13 @@ type
 
 proc canHandleDefaultValue*(v: VSPortView): bool =
     v.info.typ in ["bool", "int", "int8", "int16", "int32", "string", "char", "float"]
+
+# literal have flow input port
+proc isLitHost*(i: HostInfo): bool = i.inputPorts.len == 1
+
+#flow hosts should have more that 1 input or/and 1 output FLOW ports
+proc isFlowHost*(i: HostInfo): bool =
+    let comp = proc(p: PortInfo): bool = p.typ == "VSFlow"
+    result = i.inputPorts.filter(comp).len > 1
+    if not result:
+        result = i.outputPorts.filter(comp).len > 1
