@@ -107,9 +107,7 @@ proc rawData*[T](vs: VSPort[T]): T =
     vs.data
 
 proc newVSPort*(name: string, T: typedesc, kind: VSPortKind): VSPort[T] =
-    result = new(VSPort[T])
-    result.name = name
-    result.kind = kind
+    result = VSPort[T](name: name, kind: kind)
     result.connections = @[]
 
 proc clone*[T](port: VSPort[T], kind: VSPortKind): VSPort[T] =
@@ -436,6 +434,7 @@ proc generateCreatorProc(a: NimNode, originalProcName: string, creatorProcName: 
             ident("vs")
         )
     )
+    echo "repr ", repr(creator)
     result = creator
 
 
