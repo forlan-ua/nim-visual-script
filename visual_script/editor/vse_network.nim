@@ -23,7 +23,7 @@ proc connect*(v: VSNetworkView, a, b: VSPortView)=
             v.connections.add((a: b, b: a))
 
 proc disconnect*(v: VSNetworkView, a: VSPortView)=
-    echo "disconnet port ", a.name
+    # echo "disconnet port ", a.name
     for i, con in v.connections:
         if con.a == a or con.b == a:
             let ai = con.a.connections.find(con.b)
@@ -32,7 +32,7 @@ proc disconnect*(v: VSNetworkView, a: VSPortView)=
             if ai >= 0 and bi >= 0:
                 con.a.connections.del(ai)
                 con.b.connections.del(bi)
-                echo "PORT DISCONNECTeD ", a.name
+                # echo "PORT DISCONNECTeD ", a.name
             v.connections.del(i)
             break
 
@@ -103,7 +103,7 @@ proc removeHostVies*(v: VSNetworkView, host: VSHostView)=
     v.disconnectHost(host)
     host.removeFromSuperview()
 
-    echo "removing ", host.name
+    # echo "removing ", host.name
 
 proc serialize*(v: VSNetworkView): string =
     var

@@ -226,3 +226,40 @@ proc iadd(i1, i2: int): int {.vshost.} = i1 + i2
 
 proc eqString*(str1, str2: string): bool {.vshost.} =
     result = str1 == str2
+
+
+# type PrintVSHost* = ref object of LitVSHost
+#     i0*: VSPort[string]
+
+# proc newPrintVSHost*(): PrintVSHost =
+#     result.new()
+#     result.name = "Print"
+#     result.flow = @[]
+#     # result.o0 = newVSPort("output", string, VSPortKind.Output)
+
+# # method setValue*(host: PrintVSHost, val: string) = host.o0.write(val.parseJson())
+
+# # method getPort*(vs: PrintVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
+# #   if name == "o0":
+# #     return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
+
+# # method connect*(vs: PrintVSHost; port: string; port2: Variant) =
+# #     if port == "o0":
+# #         vs.o0.connect(port2)
+
+# method metadata*(vs: PrintVSHost): VSHostMeta =
+#     return ("PrintVSHost", "Printeral", @[], @[("output", "any", "")])
+
+# putHostToRegistry(PrintVSHost, proc(): VSHost = newJsonLitVSHost())
+
+proc print*(args: seq[string]) {.vshost.} =
+    # echo args.join(" ")
+    echo "vsprint: ", args
+
+proc print*(arg: int) {.vshost.} =
+    echo "vsprint: ", arg
+
+
+proc portConverter*[I, O](p: VSPort[I]): O =
+    discard
+

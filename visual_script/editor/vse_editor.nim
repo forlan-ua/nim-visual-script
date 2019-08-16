@@ -5,10 +5,10 @@ import nimx / [
     scroll_view, editor / tab_view
 ]
 
-import os_files.dialog
-
-import visual_script.vs_host
-import visual_script.vs_std
+import os_files / dialog
+import visual_script / [ vs_std, vs_host, vs_network ]
+import visual_script / runtime / main_dispatcher
+import tables
 
 import vse_types
 export vse_types
@@ -60,6 +60,23 @@ proc selectCurrentTab(v: VSEditorView)=
     let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork)
     if ti >= 0:
         v.networksSuperView.TabView.selectTab(ti)
+
+# proc runNetwork(v: VSEditorView)=
+#     let source = v.currentNetwork.serialize
+#     echo "run script ", source
+#     var network = generateNetwork(source)
+#     if network.flows.len > 0:
+#         for k, flow in network.flows:
+#             flow.run()
+            # echo "name ", host.name
+        # echo "name ", network.hosts[0].name
+        # network.hosts[0].invokeFlow()
+
+proc runNetwork(v: VSEditorView) =
+    let source = v.currentNetwork.serialize
+    var network = generateNetwork(source)
+    let args = @["test", "1", "5.5"]
+    dispatchNetwork("main", args, args.len)
 
 method init*(v: VSEditorView, r:Rect)=
     procCall v.View.init(r)
@@ -160,5 +177,5 @@ method init*(v: VSEditorView, r:Rect)=
     panel.addMenuWithHandler("View/Some/Test") do():
         echo "sas"
 
-    panel.addMenuWithHandler("About/WTF") do():
-        echo "wtf"
+    panel.addMenuWithHandler("Network/Run") do():
+        v.runNetwork()

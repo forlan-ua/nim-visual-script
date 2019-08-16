@@ -98,13 +98,17 @@ proc genVsDispatcherReg(name, args: NimNode): NimNode =
         name,
         prefix(argsBody, "@")
     )
+
+    echo "tree ", treeRepr(result)
+
     for i, arg in args:
         argsBody.add(
             nnkPar.newTree(
                 newLit($arg[0]),
-                newLit($arg[1])
+                newLit(repr(arg[1]))
             )
         )
+    echo "repr ", repr(result)
 
 
 proc genVsDispatcherProc(name, args: NimNode): NimNode =
@@ -181,7 +185,7 @@ macro registerNetworkDispatcher*(name: untyped, args: untyped): typed =
         genVsDispatcherProc(name, args)
     )
 
-    # echo repr(result)
+    echo repr(result)
 
 
 proc generateNetwork*(source: string): VSNetwork {.discardable.} =

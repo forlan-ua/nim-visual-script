@@ -46,10 +46,10 @@ proc reloadCache*()=
         let di = metaToInfo(disp.metadata)
         metaCache[di.name] = di
 
-    echo "\n\nprintcache\n\n"
-    for k,v in metaCache:
-        echo k, " >> ", v, " \n"
-    echo "\n\END\n\n"
+    # echo "\n\nprintcache\n\n"
+    # for k,v in metaCache:
+    #     echo k, " >> ", v, " \n"
+    # echo "\n\END\n\n"
 reloadCache()
 
 iterator vsHostsInMeta*(): HostInfo=

@@ -5,17 +5,22 @@ type VSPortKind* {.pure.} = enum
     Input
     Output
 
+type
+    # PortDataConverter*[I, O] = ref object of RootObj
+    #     dataConverter*: proc(p: VSPort[I]): O
+    #     source*: VSPort[I]
+    PortDataConverter*[I,O] = proc(p: VSPort[I]): O
 
-type VSPort*[T] = ref object of RootObj
-    name*: string
-    data: T
-    case kind*: VSPortKind:
-        of Input:
-            source: VSPort[T]
-            hasData: bool
-        of Output:
-            readImpl*: proc(): T
-    connections: seq[VSPort[T]]
+    VSPort*[T] = ref object of RootObj
+        name*: string
+        data: T
+        case kind*: VSPortKind:
+            of Input:
+                source: VSPort[T]
+                hasData: bool
+            of Output:
+                readImpl*: proc(): T
+        connections: seq[VSPort[T]]
 
 
 proc connect*[T](p1, p2: VSPort[T]) =
@@ -83,7 +88,6 @@ proc read*[T](vs: VSPort[T]): T =
         return vs.data
     if not vs.source.isNil:
         return vs.source.readOutput()
-
 
 proc write*[T](vs: VSPort[T], val: T) =
     vs.data = val
@@ -434,7 +438,7 @@ proc generateCreatorProc(a: NimNode, originalProcName: string, creatorProcName: 
             ident("vs")
         )
     )
-    echo "repr ", repr(creator)
+    # echo "repr ", repr(creator)
     result = creator
 
 
@@ -713,6 +717,8 @@ proc toVsHost(originalProcName: string, a: NimNode): NimNode =
 macro vshost*(procDef: untyped, a: untyped = nil): typed =
     # echo treeRepr(procDef), " \na ", if not a.isNil: treeRepr(a) else: "nil"
     if not a.isNil and a.kind != nnkNilLit:
-        toVsHost($a, procDef)
+        result = toVsHost($a, procDef)
     else:
-        toVsHost(procDef[0].getName(), procDef)
+        result = toVsHost(procDef[0].getName(), procDef)
+
+    echo "vshost ", repr(result)
