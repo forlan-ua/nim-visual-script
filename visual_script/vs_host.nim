@@ -721,4 +721,4 @@ macro vshost*(procDef: untyped, a: untyped = nil): typed =
     else:
         result = toVsHost(procDef[0].getName(), procDef)
 
-    echo "vshost ", repr(result)
+    # echo "vshost ", repr(result)

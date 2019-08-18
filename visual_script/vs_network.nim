@@ -1,5 +1,5 @@
 import tables, variant, macros, logging
-import vs_host, vs_std
+import vs_host, vs_std, vs_literal
 
 
 type FlowForNetwork* = ref object
@@ -99,7 +99,7 @@ proc genVsDispatcherReg(name, args: NimNode): NimNode =
         prefix(argsBody, "@")
     )
 
-    echo "tree ", treeRepr(result)
+    # echo "tree ", treeRepr(result)
 
     for i, arg in args:
         argsBody.add(
@@ -108,7 +108,7 @@ proc genVsDispatcherReg(name, args: NimNode): NimNode =
                 newLit(repr(arg[1]))
             )
         )
-    echo "repr ", repr(result)
+    # echo "repr ", repr(result)
 
 
 proc genVsDispatcherProc(name, args: NimNode): NimNode =

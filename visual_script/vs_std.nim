@@ -1,134 +1,13 @@
 import json, variant, random
-import vs_host
+import vs_host, vs_literal
 
 
-type LitVSHost* = ref object of VSHost
-method setValue*(host: LitVSHost, val: string) {.base.} = discard
 
-
-type StringLitVSHost* = ref object of LitVSHost
-    o0*: VSPort[string]
-
-proc newStringLitVSHost*(): StringLitVSHost =
-    result.new()
-    result.name = "stringLit"
-    result.flow = @[]
-    result.o0 = newVSPort("output", string, VSPortKind.Output)
-
-method setValue*(host: StringLitVSHost, val: string) = host.o0.write(val)
-
-method getPort*(vs: StringLitVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
-  if name == "o0":
-    return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
-
-method connect*(vs: StringLitVSHost; port: string; port2: Variant) =
-    if port == "o0":
-      vs.o0.connect(port2)
-
-method metadata*(vs: StringLitVSHost): VSHostMeta =
-  return ("StringLitVSHost", "StringLiteral", @[], @[("output", "string", "")])
-
-putHostToRegistry(StringLitVSHost, proc(): VSHost = newStringLitVSHost())
-
-
-type IntLitVSHost* = ref object of LitVSHost
-    o0*: VSPort[int]
-
-proc newIntLitVSHost*(): IntLitVSHost =
-    result.new()
-    result.name = "intLit"
-    result.flow = @[]
-    result.o0 = newVSPort("output", int, VSPortKind.Output)
-
-method setValue*(host: IntLitVSHost, val: string) = host.o0.write(parseInt(val))
-
-method getPort*(vs: IntLitVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
-  if name == "o0":
-    return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
-
-method connect*(vs: IntLitVSHost; port: string; port2: Variant) =
-    if port == "o0":
-        vs.o0.connect(port2)
-
-method metadata*(vs: IntLitVSHost): VSHostMeta =
-    return ("IntLitVSHost", "IntLiteral", @[], @[("output", "int", "")])
-
-putHostToRegistry(IntLitVSHost, proc(): VSHost = newIntLitVSHost())
-
-
-type FloatLitVSHost* = ref object of LitVSHost
-    o0*: VSPort[float]
-
-proc newFloatLitVSHost*(): FloatLitVSHost =
-    result.new()
-    result.name = "floatLit"
-    result.flow = @[]
-    result.o0 = newVSPort("output", float, VSPortKind.Output)
-
-method setValue*(host: FloatLitVSHost, val: string) = host.o0.write(parseFloat(val))
-
-method getPort*(vs: FloatLitVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
-  if name == "o0":
-    return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
-
-method connect*(vs: FloatLitVSHost; port: string; port2: Variant) =
-    if port == "o0":
-        vs.o0.connect(port2)
-
-method metadata*(vs: FloatLitVSHost): VSHostMeta =
-    return ("FloatLitVSHost", "FloatLiteral", @[], @[("output", "float", "")])
-
-putHostToRegistry(FloatLitVSHost, proc(): VSHost = newFloatLitVSHost())
-
-
-type BoolLitVSHost* = ref object of LitVSHost
-    o0*: VSPort[bool]
-
-proc newBoolLitVSHost*(): BoolLitVSHost =
-    result.new()
-    result.name = "boolLit"
-    result.flow = @[]
-    result.o0 = newVSPort("output", bool, VSPortKind.Output)
-
-method setValue*(host: BoolLitVSHost, val: string) = host.o0.write(val == "1")
-
-method getPort*(vs: BoolLitVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
-  if name == "o0":
-    return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
-
-method connect*(vs: BoolLitVSHost; port: string; port2: Variant) =
-    if port == "o0":
-        vs.o0.connect(port2)
-
-method metadata*(vs: BoolLitVSHost): VSHostMeta =
-    return ("BoolLitVSHost", "BoolLiteral", @[], @[("output", "bool", "")])
-
-putHostToRegistry(BoolLitVSHost, proc(): VSHost = newBoolLitVSHost())
-
-
-type JsonLitVSHost* = ref object of LitVSHost
-    o0*: VSPort[JsonNode]
-
-proc newJsonLitVSHost*(): JsonLitVSHost =
-    result.new()
-    result.name = "jsonLit"
-    result.flow = @[]
-    result.o0 = newVSPort("output", JsonNode, VSPortKind.Output)
-
-method setValue*(host: JsonLitVSHost, val: string) = host.o0.write(val.parseJson())
-
-method getPort*(vs: JsonLitVSHost; name: string, clone: bool = false, cloneAs: VSPortKind = VSPortKind.Output): Variant =
-  if name == "o0":
-    return newVariant(if clone: vs.o0.clone(cloneAs) else: vs.o0)
-
-method connect*(vs: JsonLitVSHost; port: string; port2: Variant) =
-    if port == "o0":
-        vs.o0.connect(port2)
-
-method metadata*(vs: JsonLitVSHost): VSHostMeta =
-    return ("JsonLitVSHost", "JsonLiteral", @[], @[("output", "JsonNode", "")])
-
-putHostToRegistry(JsonLitVSHost, proc(): VSHost = newJsonLitVSHost())
+genLiteralVSHost(int, parseInt)
+genLiteralVSHost(bool, parseBool)
+genLiteralVSHost(float, parseFloat)
+genLiteralVSHost(string)
+genLiteralVSHost(JsonNode, parseJson)
 
 
 type IfVSHost* = ref object of VSHost
@@ -232,6 +111,11 @@ proc print*(args: seq[string]) {.vshost.} =
 
 proc print*(arg: int) {.vshost.} =
     echo "vsprint: ", arg
+
+proc print*(arg: string) {.vshost.} =
+    echo "vsprint: ", arg
+
+proc cmpint*(a, b: int): bool {.vshost.} = a == b
 
 proc randomInt*(): int {.vshost.} =
     result = rand(high(int))
