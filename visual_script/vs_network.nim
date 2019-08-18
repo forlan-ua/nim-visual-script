@@ -81,8 +81,8 @@ iterator eachNetwork*(event: string): FlowForNetwork =
 
 iterator eachDispatcher*(): Dispatcher =
     for d in dispatchRegistry.values():
-        if d.ports.len > 0:
-            yield d
+        # if d.ports.len > 0:
+        yield d
 
 macro dispatchNetwork*(event: untyped, args: varargs[untyped]): untyped =
     result = nnkCall.newTree(
@@ -122,28 +122,12 @@ proc genVsDispatcherProc(name, args: NimNode): NimNode =
     let res = nnkStmtList.newTree()
 
     proc portData(i: int, arg: NimNode): NimNode =
-        nnkCall.newTree(
-            nnkDotExpr.newTree(
-                nnkCall.newTree(
-                    nnkDotExpr.newTree(
-                        nnkBracketExpr.newTree(
-                            nnkDotExpr.newTree(
-                                n,
-                                ident("ports")
-                            ),
-                            newLit(i)
-                        ),
-                        ident("get")
-                    ),
-                    nnkBracketExpr.newTree(
-                        ident("VSPort"),
-                        arg[1]
-                    )
-                ),
-                ident("write")
-            ),
-            arg[0]
-        )
+        let ilit = newLit(i)
+        let argN = arg[0]
+        let argT = arg[1]
+        result = quote do:
+            if `ilit` < `n`.ports.len and `n`.ports[`ilit`].ofType(VSPort[`argT`]):
+                `n`.ports[`ilit`].get(VSPort[`argT`]).write(`argN`)
 
     let forbody = nnkStmtList.newTree()
     res.add(

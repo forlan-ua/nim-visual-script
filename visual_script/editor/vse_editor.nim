@@ -8,7 +8,7 @@ import nimx / [
 import os_files / dialog
 import visual_script / [ vs_std, vs_host, vs_network ]
 import visual_script / runtime / main_dispatcher
-import tables
+import tables, os
 
 import vse_types
 export vse_types
@@ -76,7 +76,18 @@ proc runNetwork(v: VSEditorView) =
     let source = v.currentNetwork.serialize
     var network = generateNetwork(source)
     let args = @["test", "1", "5.5"]
-    dispatchNetwork("main", args, args.len)
+    # dispatchNetwork("main")
+    dispatchNetwork("mainCArgs", args, args.len)
+
+proc renamePopup(v: VSEditorView)=
+    let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
+    if ti >= 0:
+        let oldName = v.currentNetwork.name
+        v.newTfPopup(continuous = false) do(str: string):
+            v.currentNetwork.name = str
+            v.networksSuperView.TabView.setTitleOfTab(str, ti)
+            v.networks[oldName] = nil
+            v.networks[str] = v.currentNetwork
 
 method init*(v: VSEditorView, r:Rect)=
     procCall v.View.init(r)
@@ -130,6 +141,11 @@ method init*(v: VSEditorView, r:Rect)=
         di.extension = "vsn"
         let path = di.show()
         if path.len > 0:
+            if v.currentNetwork.name == "Empty":
+                let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
+                v.currentNetwork.name = path.splitFile().name
+                v.networksSuperView.TabView.setTitleOfTab(v.currentNetwork.name, ti)
+
             writeFile(path, v.currentNetwork.serialize)
             echo "save to ", path
 
@@ -146,14 +162,7 @@ method init*(v: VSEditorView, r:Rect)=
         sidePanel.onChanged()
 
     panel.addMenuWithHandler("Network/Rename") do():
-        let ti = v.networksSuperView.TabView.tabIndex(v.currentNetwork.name)
-        if ti >= 0:
-            let oldName = v.currentNetwork.name
-            v.newTfPopup(continuous = false) do(str: string):
-                v.currentNetwork.name = str
-                v.networksSuperView.TabView.setTitleOfTab(str, ti)
-                v.networks[oldName] = nil
-                v.networks[str] = v.currentNetwork
+        v.renamePopup()
 
     panel.addMenuWithHandler("Network/Close") do():
         var tc = v.networksSuperView.TabView.tabIndex(v.currentNetwork)

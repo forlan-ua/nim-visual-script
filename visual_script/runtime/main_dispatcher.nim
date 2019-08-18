@@ -1,4 +1,5 @@
 import .. / .. / visual_script
 
-registerNetworkDispatcher("main", {args: seq[string], argc: int})
+registerNetworkDispatcher("mainCArgs", {args: seq[string], argc: int})
+registerNetworkDispatcher("main", {})
 

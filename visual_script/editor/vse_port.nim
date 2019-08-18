@@ -16,13 +16,18 @@ proc isPortsCompatible*(a, b: VSPortView): bool =
         a.superview != b.superview
 
 method onTapDown(ls: PortViewScrollListner, e: var Event) =
-    ls.port.listner.onPortDragStart(ls.port)
+    if e.keyCode == VirtualKey.MouseButtonPrimary:
+        ls.port.listner.onPortDragStart(ls.port)
+    elif e.keyCode == VirtualKey.MouseButtonSecondary:
+        echo "popup"
 
 method onScrollProgress(ls: PortViewScrollListner, dx, dy : float32, e : var Event) =
+    # if e.keyCode == VirtualKey.MouseButtonPrimary:
     ls.port.listner.onPortDrag(e.position)
 
 method onTapUp*(ls: PortViewScrollListner, dx, dy : float32, e : var Event) =
-    ls.port.listner.onPortDragEnd(ls.port)
+    if e.keyCode == VirtualKey.MouseButtonPrimary:
+        ls.port.listner.onPortDragEnd(ls.port)
 
 method onMouseIn*(v: VSPortView, e: var Event) =
     v.listner.onPortOverIn(v)
@@ -61,12 +66,11 @@ proc createPortView*(info: PortInfo, p: var Point, s: Size, orientation: bool): 
     result.orientation = orientation
     result.pinColor = pinDefaultColor
     result.info = info
-    result.defaultValue = info.value
-
+    result.mDefaultValue = info.value
+    
     result.trackMouseOver(true)
-
+    
     result.init(newRect(p.x, p.y, s.width, s.height))
-
     result.pinPosition = newPoint((if orientation: s.width - pinSize.width * 0.5 else: -pinSize.width * 0.5), 0)
 
     var x = pinSize.width

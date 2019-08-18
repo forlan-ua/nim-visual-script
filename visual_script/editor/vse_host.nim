@@ -34,7 +34,8 @@ proc hostSize*(info: HostInfo, offw: float = 0.0): tuple[size: Size, portSize: S
         ) + offw
 
     var h = 25.0 + portStep * max(info.inputPorts.len, info.outputPorts.len).float
-
+    if info.isLit:
+        h += 25.0
     result.size = newSize(w,h)
     result.portSize = newSize(max(ops.width, ips.width), 25.0)
 
@@ -58,7 +59,8 @@ proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
     var inputViews = newSeq[VSPortView]()
     var ip = newPoint(0.0, 25.0)
     if info.inputPorts.len > 0:
-        for pi in info.inputPorts:
+        for i, pi in info.inputPorts:
+            # if info.isLit and i == 0: continue
             var port = createPortView(pi, ip, sizeI.portSize, false)
             inputViews.add(port)
 
@@ -66,9 +68,18 @@ proc createHostView*(info: HostInfo, listner: VSPortListner): VSHostView=
 
     var op = newPoint(size.width - sizeI.portSize.width, 25.0)
     if info.outputPorts.len > 0:
-        for pi in info.outputPorts:
+        for i, pi in info.outputPorts:
+            # if info.isLit and i == 0: continue
             var port = createPortView(pi, op, sizeI.portSize, true)
             outputViews.add(port)
+    
+    if info.isLit:
+        let letPort = outputViews[0]
+        var defaultValueView = newTextField(result, newPoint(ip.x, op.y), newSize(size.width, 20.0), letPort.mDefaultValue)
+        defaultValueView.continuous = true
+        defaultValueView.onAction do():
+            letPort.mDefaultValue = defaultValueView.text
+            echo "set default value ", letPort.mDefaultValue
 
     result.input = @[]
     for i, p in inputViews:

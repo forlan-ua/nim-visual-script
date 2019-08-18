@@ -47,7 +47,10 @@ type
         listner*: VSPortListner
         pinPosition*: Point
         host*: VSHostView
-        defaultValue*: string
+        mDefaultValue*: string
+
+    VSPortPopup* = ref object of View
+        port*: VSPortView
 
     VSHostView* = ref object of PanelView
         input*: seq[VSPortView]
@@ -90,7 +93,7 @@ proc canHandleDefaultValue*(v: VSPortView): bool =
     v.info.typ in ["bool", "int", "int8", "int16", "int32", "string", "char", "float"]
 
 # literal have flow input port
-proc isLitHost*(i: HostInfo): bool = i.inputPorts.len == 1
+proc isLit*(i: HostInfo): bool = i.inputPorts.len == 1 and i.outputPorts.len == 2 
 
 #flow hosts should have more that 1 input or/and 1 output FLOW ports
 proc isFlowHost*(i: HostInfo): bool =

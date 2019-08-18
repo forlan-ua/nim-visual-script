@@ -124,10 +124,10 @@ proc serialize*(v: VSNetworkView): string =
         else:
             hosts &= t & "\n"
 
-        if h.info.isLitHost:
+        if h.info.isLit:
             for i, p in h.output:
-                if p.defaultValue.len > 0:
-                    var lit = "$1.o$2=$3" % [$h.id, $(i-1), p.defaultValue]
+                if p.mDefaultValue.len > 0:
+                    var lit = "$1.o$2=$3" % [$h.id, $(i-1), p.mDefaultValue]
                     links &= lit & "\n"
 
         # LINKS
@@ -208,7 +208,7 @@ proc deserialize*(v: VSNetworkView, data: seq[string], creator: VSEHostCreator) 
 
 
                 if sep == "=":
-                    ih.output[ip].defaultValue = sline[1]
+                    ih.output[ip].mDefaultValue = sline[1]
                 else:
                     var o = sline[1].split(".")
                     var oid = o[0].parseInt()
