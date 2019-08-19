@@ -1,5 +1,5 @@
 import tables, variant, macros, logging
-import vs_host, vs_std, vs_literal
+import vs_host
 
 
 type FlowForNetwork* = ref object
@@ -171,6 +171,19 @@ macro registerNetworkDispatcher*(name: untyped, args: untyped): typed =
 
     echo repr(result)
 
+type VSNetworkExtension* = proc(net: VSNetwork, source: string, start: var int, host1Id, host2Id, port1Name, port2Name: var string, localHostMapper: Table[string, int])
+var
+    flowNetworkExensions = initTable[char, VSNetworkExtension]()
+    portNetworkExensions = initTable[char, VSNetworkExtension]()
+
+proc registerFlowNetworkExtension*(k: char, ext: VSNetworkExtension) =
+    flowNetworkExensions[k] = ext
+    echo "register registerFlowNetworkExtension ", k
+
+proc registerPortNetworkExtension*(k: char, ext: VSNetworkExtension) =
+    portNetworkExensions[k] = ext
+    echo "register registerPortNetworkExtension ", k
+
 
 proc generateNetwork*(source: string): VSNetwork {.discardable.} =
     let net = VSNetwork.new()
@@ -251,12 +264,10 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
                 #     echo "Save port `", host.name, ".", port1Name, "` as `", ind, "` input for dispatcher ", flowName
                 # echo "Connect Port `", host.name, ".", port1Name, "` to `", flowName, ".", ind, "`"
                 host.connect(port1Name, flow.ports[ind])
-        elif source[start] == '=':
-            assert(net.hosts[localHostMapper[host1LocalId]] of LitVSHost)
 
-            start += source.parseUntil(port2Name, '\n', start + 1) + 2
-            let host = net.hosts[localHostMapper[host1LocalId]]
-            host.LitVSHost.setValue(port2Name)
+        elif source[start] in portNetworkExensions:
+            portNetworkExensions[source[start]](net, source, start, host1LocalId, host2LocalId, port1Name, port2Name, localHostMapper)
+
     start.inc
 
     # echo " "
@@ -264,31 +275,18 @@ proc generateNetwork*(source: string): VSNetwork {.discardable.} =
 
     while source[start] notin {'\n', '#'}:
         start += source.parseUntil(host1LocalId, '>', start) + 1
-        case source[start]:
-            of '+':
-                start += source.parseUntil(host2LocalId, '\n', start + 1) + 2
-
+        if source[start] in flowNetworkExensions:
+            flowNetworkExensions[source[start]](net, source, start, host1LocalId, host2LocalId, port1Name, port2Name, localHostMapper)
+        else:
+            start += source.parseUntil(host2LocalId, '\n', start) + 1
+            if localHostMapper.hasKey(host1LocalId):
                 let host1 = net.hosts[localHostMapper[host1LocalId]]
                 let host2 = net.hosts[localHostMapper[host2LocalId]]
-
-                host1.IfVSHost.flow.add(host2)
-            of '-':
-                start += source.parseUntil(host2LocalId, '\n', start + 1) + 2
-
-                let host1 = net.hosts[localHostMapper[host1LocalId]]
-                let host2 = net.hosts[localHostMapper[host2LocalId]]
-
-                host1.IfVSHost.falseFlow.add(host2)
+                host1.flow.add(host2)
             else:
-                start += source.parseUntil(host2LocalId, '\n', start) + 1
-                if localHostMapper.hasKey(host1LocalId):
-                    let host1 = net.hosts[localHostMapper[host1LocalId]]
-                    let host2 = net.hosts[localHostMapper[host2LocalId]]
-                    host1.flow.add(host2)
-                else:
-                    let flow = net.flows[localFlowMapper[host1LocalId]]
-                    let host = net.hosts[localHostMapper[host2LocalId]]
-                    flow.accessPoints.add(host)
+                let flow = net.flows[localFlowMapper[host1LocalId]]
+                let host = net.hosts[localHostMapper[host2LocalId]]
+                flow.accessPoints.add(host)
 
     # echo ">>>>>>>>>>>>>>>>>>>>>>>"
     putNetworkToRegistry(net)
